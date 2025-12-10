@@ -31,10 +31,10 @@ public class Mazereader {
                             if(c == '#'){
                                 maze.get(rowCnt).add(-1);
                             }
-                            else if(c == 'S'){
+                            else if(c == 'S' && c=='G'){
                                 maze.get(rowCnt).add(0);
                             }else{
-                                maze.get(rowCnt).add(-2);
+                                maze.get(rowCnt).add(0);
                             }
                         }
                     }
