@@ -25,6 +25,16 @@ public class MazeGUI extends JFrame {
     private AlgorithmStatusPanel statusAStar;
     private AlgorithmStatusPanel statusGA;
 
+    private List<Point> cachedGAPath = null;
+    private double cachedGAFitness = 0;
+
+    private int gaPopSize = 20;         
+    private double gaMutationRate = 0.1; 
+    private double gacCossoverRate = 0.9;
+    private int gaElitismCount = 5;
+    private int gaMaxGenerations = 50;
+
+
     public MazeGUI() {
         setTitle("Maze Solver");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -61,6 +71,7 @@ public class MazeGUI extends JFrame {
             Mazereader mr = new Mazereader();
             // Assuming Mazereader returns the raw 2D ArrayList, and MazeMap constructor takes it
             this.currentMap = new MazeMap(mr.read(fileChooser.getSelectedFile().getAbsolutePath()));
+            cachedGAPath = null;
             if (currentMap != null) buildAndShowMaze(currentMap);
         }
     }
@@ -81,10 +92,12 @@ public class MazeGUI extends JFrame {
         // 4. Create a container for the Game View (Top Bar + ScrollPane)
         JPanel controlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JButton btnBack = new JButton("Back");
-        JButton btnReset = new JButton("Clear Grid");
+        JButton btnReset = new JButton("Clear / Reset");
         JButton btnGreedy = new JButton("Run Greedy");
         JButton btnAStar = new JButton("Run Pure A*");
-        JButton btnGA = new JButton("Run GA (My Code)");
+        JButton btnGA = new JButton("Run GA");
+
+        JButton btnSettings = new JButton("⚙ Settings");
 
         JPanel dashboard = new JPanel();
         dashboard.setLayout(new BoxLayout(dashboard, BoxLayout.Y_AXIS));
@@ -108,6 +121,8 @@ public class MazeGUI extends JFrame {
         controlPanel.add(btnGreedy);
         controlPanel.add(btnAStar);
         controlPanel.add(btnGA);
+
+        controlPanel.add(btnSettings);
         
         btnGreedy.addActionListener(e -> {
             resetGridColors();
@@ -125,19 +140,75 @@ public class MazeGUI extends JFrame {
 
         btnGA.addActionListener(e -> {
             resetGridColors();
-            runRealTimeGA(map); // <--- Calls your GA Logic
+            if (cachedGAPath != null) {
+                // DATA EXISTS: Show it instantly (No loading)
+                drawPath(cachedGAPath, Color.GREEN.darker());
+                statusGA.updateStatsLive(1000, 1000, cachedGAPath, map, cachedGAFitness, "Cached Result");
+            } else {
+                // NO DATA: Run simulation
+                runRealTimeGA(map); 
+            }
         });
 
-        btnReset.addActionListener(e -> resetGridColors());
+        btnReset.addActionListener(e -> {
+            resetGridColors();
+            cachedGAPath = null; // Wipe memory
+            statusGA.setLoading("Memory Cleared");
+        });
         btnBack.addActionListener(e -> cardLayout.show(mainContainer, MENU_PANEL));
 
-        JPanel gameView = new JPanel(new BorderLayout());
-        gameView.add(controlPanel, BorderLayout.NORTH);
-        gameView.add(scrollPane, BorderLayout.CENTER);
-        gameView.add(dashboard, BorderLayout.EAST);
+        btnSettings.addActionListener(e -> showGASettings());
 
-        mainContainer.add(gameView, MAZE_PANEL);
+        JPanel View = new JPanel(new BorderLayout());
+        View.add(controlPanel, BorderLayout.NORTH);
+        View.add(scrollPane, BorderLayout.CENTER);
+        View.add(dashboard, BorderLayout.EAST);
+
+        mainContainer.add(View, MAZE_PANEL);
         cardLayout.show(mainContainer, MAZE_PANEL);
+    }
+
+    private void showGASettings() {
+        // Create input fields
+        JTextField txtPop = new JTextField(String.valueOf(gaPopSize));
+        JTextField txtMut = new JTextField(String.valueOf(gaMutationRate));
+        JTextField txtGen = new JTextField(String.valueOf(gaMaxGenerations));
+        JTextField txtEli = new JTextField(String.valueOf(gaElitismCount));
+        JTextField txtCro = new JTextField(String.valueOf(gacCossoverRate));
+
+        // Create a nice panel layout for the inputs
+        JPanel panel = new JPanel(new GridLayout(0, 1));
+        panel.add(new JLabel("Population Size (e.g., 100):"));
+        panel.add(txtPop);
+        panel.add(new JLabel("Mutation Rate (0.0 - 1.0):"));
+        panel.add(txtMut);
+        panel.add(new JLabel("Cossover Rate (0.0 - 1.0):"));
+        panel.add(txtCro);
+        panel.add(new JLabel("Max Generations (e.g., 1000):"));
+        panel.add(txtGen);
+        panel.add(new JLabel("Elitism Count (e.g., 5):"));
+        panel.add(txtEli);
+
+        int result = JOptionPane.showConfirmDialog(this, panel, "GA Configuration",
+            JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+        if (result == JOptionPane.OK_OPTION) {
+            try {
+                // Parse and Save
+                gaPopSize = Integer.parseInt(txtPop.getText());
+                gaMutationRate = Double.parseDouble(txtMut.getText());
+                gaMaxGenerations = Integer.parseInt(txtGen.getText());
+                gaElitismCount = Integer.parseInt(txtEli.getText());
+                
+                // CRITICAL: Clear cache because settings changed!
+                cachedGAPath = null; 
+                statusGA.setLoading("Settings Updated");
+                
+                JOptionPane.showMessageDialog(this, "Settings Saved! Cache cleared.");
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(this, "Invalid number entered!");
+            }
+        }
     }
 
     private void runRealTimeGA(MazeMap map) {
@@ -145,11 +216,11 @@ public class MazeGUI extends JFrame {
         
         Thread gaThread = new Thread(() -> {
             // --- 1. Parameters ---
-            int popSize = 20;         
-            double mutationRate = 0.1; 
-            double crossoverRate = 0.9;
-            int elitismCount = 5;
-            int maxGenerations = 50;
+            int popSize = gaPopSize;         
+            double mutationRate = gaMutationRate; 
+            double crossoverRate = gacCossoverRate;
+            int elitismCount = gaElitismCount;
+            int maxGenerations = gaMaxGenerations;
 
             // --- 2. Initialize GA ---
             GeneticAlgorithm ga = new GeneticAlgorithm(map, popSize, mutationRate, crossoverRate, elitismCount);
@@ -204,14 +275,15 @@ public class MazeGUI extends JFrame {
                     statusGA.updateStatsLive(currentGen, maxGenerations, visualPath, map, currentFit, statusText);
                 });
 
-                try { Thread.sleep(10); } catch (InterruptedException e) {} // Fast animation
+                try { Thread.sleep(500); } catch (InterruptedException e) {} // Fast animation
             }
             
             // --- 5. FINISHED: Show Final Result ---
             // Get the absolute best from the final population
             Chromosome finalBest = population.get(0);
             List<Point> finalPath = DumbDecoder.getPath(map, finalBest, true);
-            
+            cachedGAPath = new ArrayList<>(finalPath);
+            cachedGAFitness = finalBest.fitness;
             SwingUtilities.invokeLater(() -> {
                 resetGridColors();
                 drawPath(finalPath, Color.GREEN.darker());
