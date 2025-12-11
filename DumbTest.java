@@ -63,13 +63,13 @@ public class DumbTest {
         double mutationRate = 0.1; 
         double crossoverRate = 0.9;
         int elitismCount = 5;
-        int maxGenerations = 1000;
+        int maxGenerations = 300;
 
         GeneticAlgorithm ga = new GeneticAlgorithm(map, popSize, mutationRate, crossoverRate, elitismCount);
 
         System.out.println("Initializing Pure Random Population (No Seeds)...");
         ArrayList<Chromosome> population = ga.initPopulation(null); 
-        
+
         double lastBestFitness = Double.MAX_VALUE;
         int stagnationCount = 0;
         double defaultMutationRate = mutationRate;
@@ -79,11 +79,8 @@ public class DumbTest {
             
             // ครึ่งหลังเปิดตา A*
             if (gen > maxGenerations / 2) {
-                useHeuristic = true;
-                DumbDecoder.ALPHA = 1.2;
-            } else {
-                DumbDecoder.ALPHA = 10.0; 
-            }
+                //useHeuristic = true;
+            } 
 
             population = ga.evolve(population, useHeuristic);
             

@@ -22,19 +22,47 @@ public class Chromosome implements Comparable<Chromosome> {
         return genes[r * cols + c];
     }
 
+    // public void mutate(double mutationRate) {
+    //     for (int i = 0; i < genes.length; i++) {
+    //         if (rand.nextDouble() < mutationRate) {
+    //             if (genes[i] > 0.5) {
+    //                 genes[i] = rand.nextDouble() * 0.2;
+    //             } else {
+    //                 genes[i] = 0.8 + (rand.nextDouble() * 0.2);
+    //             }
+    //             this.fitness = -1;
+    //         }
+    //     }
+    // }
+    
     public void mutate(double mutationRate) {
         for (int i = 0; i < genes.length; i++) {
             if (rand.nextDouble() < mutationRate) {
-                if (genes[i] > 0.5) {
-                    genes[i] = rand.nextDouble() * 0.2;
+                if (rand.nextDouble() < 0.3) { 
+                    if (genes[i] > 0.5) {
+                        genes[i] = rand.nextDouble() * 0.2;
+                    } else {
+                        genes[i] = 0.8 + (rand.nextDouble() * 0.2);
+                    }
                 } else {
-                    genes[i] = 0.8 + (rand.nextDouble() * 0.2);
+                    double change = (rand.nextDouble() - 0.5) * 0.2;
+                    genes[i] += change;
+                    if (genes[i] < 0.0001) genes[i] = 0.0001;
+                    if (genes[i] > 1.0) genes[i] = 1.0;
                 }
-                
                 this.fitness = -1;
             }
         }
     }
+
+    // public void mutate(double mutationRate) {
+    //     for (int i = 0; i < genes.length; i++) {
+    //         if (rand.nextDouble() < mutationRate) {
+    //             genes[i] = rand.nextDouble(); 
+    //             this.fitness = -1;
+    //         }
+    //     }
+    // }
 
     public void setGene(int r, int c, double value) {
         if (r >= 0 && r < rows && c >= 0 && c < cols) {
