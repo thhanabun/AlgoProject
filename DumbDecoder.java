@@ -5,7 +5,7 @@ import java.util.PriorityQueue;
 
 public class DumbDecoder {
 
-    public static double ALPHA = 8; 
+    public static double ALPHA = 10; 
     private static class Node implements Comparable<Node> {
         int r, c;
         double gVirtual;

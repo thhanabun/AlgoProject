@@ -87,7 +87,7 @@ public class GeneticAlgorithm {
     //     return newPopulation;
     // }
 
-    public ArrayList<Chromosome> evolve(ArrayList<Chromosome> population, boolean useHeuristic) {
+    public ArrayList<Chromosome> evolve(ArrayList<Chromosome> population, boolean useHeuristic, int mutationMode) {
         ArrayList<Chromosome> newPopulation = new ArrayList<>();
         Collections.sort(population);
         for (int i = 0; i < elitismCount; i++) {
@@ -105,7 +105,7 @@ public class GeneticAlgorithm {
                 child = parent1.clone();
             }
 
-            child.mutate(mutationRate);
+            child.mutate(mutationRate, mutationMode);
 
             if (child.fitness != -1) {
                 child.fitness = -1; 

@@ -230,19 +230,20 @@ public class MazeGUI extends JFrame {
             int stagnationCount = 0;
             double defaultMutationRate = mutationRate;
             boolean useHeuristic = false;
+            int mutationMode = Chromosome.MUTATION_RANDOM;
 
             // --- 3. Evolution Loop ---
             for (int gen = 1; gen <= maxGenerations; gen++) {
                 
                 // Heuristic Switching
-                if (gen > maxGenerations / 2) {
-                    useHeuristic = true;
-                    DumbDecoder.ALPHA = 1.2;
-                } else {
-                    DumbDecoder.ALPHA = 10.0; 
-                }
+                // if (gen > maxGenerations / 2) {
+                //     useHeuristic = true;
+                //     DumbDecoder.ALPHA = 1.2;
+                // } else {
+                //     DumbDecoder.ALPHA = 10.0; 
+                // }
 
-                population = ga.evolve(population, useHeuristic);
+                population = ga.evolve(population, useHeuristic,mutationMode);
                 Collections.sort(population);
                 Chromosome best = population.get(0);
 
