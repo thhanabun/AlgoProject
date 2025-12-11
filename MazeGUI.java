@@ -230,7 +230,7 @@ public class MazeGUI extends JFrame {
             int stagnationCount = 0;
             double defaultMutationRate = mutationRate;
             boolean useHeuristic = false;
-            int mutationMode = Chromosome.MUTATION_RANDOM;
+            int mutationMode = Chromosome.MUTATION_HYBRID;
 
             // --- 3. Evolution Loop ---
             for (int gen = 1; gen <= maxGenerations; gen++) {
@@ -276,7 +276,7 @@ public class MazeGUI extends JFrame {
                     statusGA.updateStatsLive(currentGen, maxGenerations, visualPath, map, currentFit, statusText);
                 });
 
-                try { Thread.sleep(500); } catch (InterruptedException e) {} // Fast animation
+                try { Thread.sleep(100); } catch (InterruptedException e) {} // Fast animation
             }
             
             // --- 5. FINISHED: Show Final Result ---

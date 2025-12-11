@@ -41,14 +41,14 @@ public class Chromosome implements Comparable<Chromosome> {
                         }
                         break;
                     case MUTATION_HYBRID:
-                        if (rand.nextDouble() < 0.3) { 
+                        if (rand.nextDouble() < 0.2) { 
                             if (genes[i] > 0.5) {
                                 genes[i] = rand.nextDouble() * 0.2;
                             } else {
                                 genes[i] = 0.8 + (rand.nextDouble() * 0.2);
                             }
                         } else {
-                            double change = (rand.nextDouble() - 0.5) * 0.2;
+                            double change = (rand.nextDouble() - 0.5) * 0.1;
                             genes[i] += change;
                             if (genes[i] < 0.0001) genes[i] = 0.0001;
                             if (genes[i] > 1.0) genes[i] = 1.0;
