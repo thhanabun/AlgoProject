@@ -9,7 +9,7 @@ public class DumbTest {
         // --------------------------------------------------------
         System.out.println("Loading Map...");
         Mazereader mr = new Mazereader();
-        ArrayList<ArrayList<Integer>> maze = mr.read("MAZE/m100_100.txt"); 
+        ArrayList<ArrayList<Integer>> maze = mr.read("MAZE/m15_15.txt"); 
         
         if (maze == null) {
             System.err.println("Error: Could not read maze file!");
@@ -64,6 +64,7 @@ public class DumbTest {
         double crossoverRate = 0.9;
         int elitismCount = 5;
         int maxGenerations = 300;
+        int mutationMode = Chromosome.MUTATION_RANDOM;
 
         GeneticAlgorithm ga = new GeneticAlgorithm(map, popSize, mutationRate, crossoverRate, elitismCount);
 
@@ -82,7 +83,7 @@ public class DumbTest {
                 //useHeuristic = true;
             } 
 
-            population = ga.evolve(population, useHeuristic);
+            population = ga.evolve(population, useHeuristic, mutationMode);
             
             Collections.sort(population);
             Chromosome best = population.get(0);
@@ -130,6 +131,7 @@ public class DumbTest {
         System.out.println("------------------------------");
         System.out.println("Final Solution Found!");
         System.out.println("Best Fitness: " + solution.fitness);
+        System.out.println(population.get(50).fitness);
         System.out.println("A* Optimal  : " + optimalCost);
         System.out.println("Greedy Cost : " + greedyCost);
         
