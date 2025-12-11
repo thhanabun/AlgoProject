@@ -9,7 +9,7 @@ public class DumbTest {
         // --------------------------------------------------------
         System.out.println("Loading Map...");
         Mazereader mr = new Mazereader();
-        ArrayList<ArrayList<Integer>> maze = mr.read("MAZE/m70_60.txt"); // เช็คชื่อไฟล์ดีๆ นะครับ m100_90 หรือ m100_100
+        ArrayList<ArrayList<Integer>> maze = mr.read("MAZE/m100_100.txt"); 
         
         if (maze == null) {
             System.err.println("Error: Could not read maze file!");
@@ -18,76 +18,79 @@ public class DumbTest {
 
         MazeMap map = new MazeMap(maze);
         System.out.println("Map Created! Size: " + map.rows + "x" + map.cols);
-        System.out.println("Start: " + map.start + " -> Goal: " + map.goal);
-
+        
         // --------------------------------------------------------
-        // 2. Run Pure A* (Benchmark)
+        // BENCHMARK 1: Pure A* (The Optimal Target)
         // --------------------------------------------------------
-        System.out.println("\n--- Running Pure A* Benchmark ---");
+        System.out.println("\n==========================================");
+        System.out.println("BENCHMARK 1: Pure A* (Global Optimum)");
+        System.out.println("==========================================");
+        
         long startA = System.currentTimeMillis();
-
         double optimalCost = DumbDecoder.runPureAStar(map); 
         long endA = System.currentTimeMillis();
         
-        System.out.println("Optimal Cost (Benchmark): " + optimalCost);
-        System.out.println("Time taken: " + (endA - startA) + " ms");
+        System.out.println(">> Optimal Cost: " + optimalCost);
+        System.out.println(">> Time: " + (endA - startA) + " ms");
+
+        // --------------------------------------------------------
+        // BENCHMARK 2: Greedy Search (The Baseline to Beat)
+        // --------------------------------------------------------
+        System.out.println("\n==========================================");
+        System.out.println("BENCHMARK 2: Greedy Best-First (Speed King)");
+        System.out.println("==========================================");
         
-        List<Point> optimalPath = DumbDecoder.getPureAStarPath(map);
-        if (map.rows <= 30) {
-            System.out.println("Optimal Path:");
-            printVisualMap(map, optimalPath);
-        } else {
-            System.out.println("(Map too large to visualize path in console)");
-        }
-
-        System.out.println();
-        System.out.println("Generating Greedy Seed Path...");
         List<Point> greedyPath = DumbDecoder.getGreedyPath(map);
-        if (greedyPath.isEmpty()) {
-            System.err.println("Greedy Search failed! (Map might be blocked)");
+        double greedyCost = calculatePathCost(map, greedyPath); // คำนวณ Cost ของ Greedy
+        
+        System.out.println(">> Greedy Cost: " + greedyCost);
+        System.out.println(">> Steps: " + greedyPath.size());
+        
+        if (greedyCost > optimalCost) {
+            System.out.println("(Note: Greedy is sub-optimal. GA should try to beat this score!)");
         } else {
-            System.out.println("Greedy Path Found! Steps: " + greedyPath.size());
+            System.out.println("(Note: Greedy found optimal/near-optimal path. GA has a hard job!)");
         }
 
         // --------------------------------------------------------
-        // 3. Setup Genetic Algorithm
+        // CHALLENGER: Genetic Algorithm (Pure Random Start)
         // --------------------------------------------------------
-        System.out.println("\n--- Start GA Optimization ---");
+        System.out.println("\n==========================================");
+        System.out.println("CHALLENGER: Genetic Algorithm (Pure Random)");
+        System.out.println("==========================================");
         
         int popSize = 100;         
-        double mutationRate = 0.1;
+        double mutationRate = 0.1; 
         double crossoverRate = 0.9;
         int elitismCount = 5;
-        int maxGenerations = 1000;  
+        int maxGenerations = 1000;
 
         GeneticAlgorithm ga = new GeneticAlgorithm(map, popSize, mutationRate, crossoverRate, elitismCount);
 
-        // --------------------------------------------------------
-        // 4. Run Evolution Loop
-        // --------------------------------------------------------
-        System.out.println("Injecting Greedy Path into Population...");
-        ArrayList<Chromosome> population = ga.initPopulation(greedyPath);
+        System.out.println("Initializing Pure Random Population (No Seeds)...");
+        ArrayList<Chromosome> population = ga.initPopulation(null); 
         
         double lastBestFitness = Double.MAX_VALUE;
         int stagnationCount = 0;
         double defaultMutationRate = mutationRate;
-        boolean useHeuristic = false; // [NEW] เริ่มต้นแบบปิดตา (Blind)
+        boolean useHeuristic = false; 
 
         for (int gen = 1; gen <= maxGenerations; gen++) {
             
-            // [NEW] Logic สลับโหมด: ครึ่งหลังเปิดตา A* ช่วยดึงเส้นทาง
-            if (gen > maxGenerations / 2) useHeuristic = true;
-        
+            // ครึ่งหลังเปิดตา A*
+            if (gen > maxGenerations / 2) {
+                useHeuristic = true;
+                DumbDecoder.ALPHA = 1.2;
+            } else {
+                DumbDecoder.ALPHA = 10.0; 
+            }
 
-            // ส่ง useHeuristic เข้าไป
             population = ga.evolve(population, useHeuristic);
             
             Collections.sort(population);
             Chromosome best = population.get(0);
 
-            // -----------------------------------------------------------
-            // Logic: Adaptive Mutation (ระเบิดพลังเมื่อติดขัด)
-            // -----------------------------------------------------------
+            // --- Adaptive Mutation Logic ---
             if (Math.abs(best.fitness - lastBestFitness) < 0.0001) {
                 stagnationCount++; 
             } else {
@@ -96,61 +99,85 @@ public class DumbTest {
                 ga.setMutationRate(defaultMutationRate); 
             }
 
-            if (stagnationCount > 50) {
-                if (stagnationCount == 51) {
-                    // System.out.println(" [BOOST MUTATION!]"); // ปิดไว้ก็ได้เดี๋ยวรกจอ
-                }
-                ga.setMutationRate(0.3); 
-            }
-            // -----------------------------------------------------------
+            if (stagnationCount > 50) ga.setMutationRate(0.4); 
+            // -------------------------------
 
-            
             // Print Status
-            if (gen % 1 == 0 || gen == 1 || best.fitness <= optimalCost) {
-                System.out.printf("Generation %3d: Best Fitness = %.2f", gen, best.fitness);
+            if (gen % 10 == 0 || gen == 1 || best.fitness <= optimalCost) {
+                System.out.printf("Gen %4d: Best = %7.2f", gen, best.fitness);
                 
                 if (best.fitness < 10000) {
-                    System.out.print(" [Path Found!]");
+                    // เปรียบเทียบกับ Greedy ให้ดูด้วย
+                    if (best.fitness < greedyCost) System.out.print(" [Beats Greedy!]");
+                    else System.out.print(" [Trailing Greedy...]");
                 } else {
                     System.out.print(" [Searching...]");
                 }
                 
-                if (stagnationCount > 50) System.out.print(" [Stuck... Boosting Mutation]");
-                if (useHeuristic) System.out.print(" [Mode: A* Guided]"); // บอกสถานะด้วย
+                if (useHeuristic) System.out.print(" [A* Mode]");
+                if (stagnationCount > 50) System.out.print(" [Boost]");
                 
                 System.out.println();
             }
 
-            // Early Stopping
-            if (best.fitness <= optimalCost + 0.001) { // เผื่อ Floating point error นิดนึง
+            if (best.fitness <= optimalCost + 0.001) {
                 System.out.println("\n>>> Found Optimal Solution at Gen " + gen + " <<<");
                 break;
             }
         }
 
         // --------------------------------------------------------
-        // 5. Final Result
+        // Final Result
         // --------------------------------------------------------
         Chromosome solution = population.get(0);
         System.out.println("------------------------------");
         System.out.println("Final Solution Found!");
         System.out.println("Best Fitness: " + solution.fitness);
-        System.out.println("Gap from Optimal: " + (solution.fitness - optimalCost));
-
-        List<Point> solutionPath = DumbDecoder.getPath(map, solution, true);
+        System.out.println("A* Optimal  : " + optimalCost);
+        System.out.println("Greedy Cost : " + greedyCost);
         
-        if (solutionPath.isEmpty()) {
-            System.out.println("WARNING: No valid path found.");
-        } else {
-            System.out.println("Path Steps: " + solutionPath.size());
-            
-            if (map.rows <= 90) {
-                printVisualMap(map, solutionPath);
+        List<Point> solutionPath = DumbDecoder.getPath(map, solution, true);
+        if (!solutionPath.isEmpty()) {
+            System.out.print("Path Sequence: ");
+            int limit = 4;
+
+            if (solutionPath.size() <= limit * 2) {
+                for (int i = 0; i < solutionPath.size(); i++) {
+                    System.out.print(solutionPath.get(i));
+                    if (i < solutionPath.size() - 1) System.out.print(" -> ");
+                }
+                System.out.println();
             } else {
-                System.out.println("Path (Partial): " + solutionPath.get(0) + " ... " + solutionPath.get(solutionPath.size()-1));
+                for (int i = 0; i < limit; i++) {
+                    System.out.print(solutionPath.get(i) + " -> ");
+                }
+
+                int skipped = solutionPath.size() - (limit * 2);
+                System.out.print("... (" + skipped + " steps) ... -> ");
+
+                for (int i = solutionPath.size() - limit; i < solutionPath.size(); i++) {
+                    System.out.print(solutionPath.get(i));
+                    if (i < solutionPath.size() - 1) System.out.print(" -> ");
+                }
+                System.out.println();
+            }
+
+            if (map.rows <= 90) {
+                 printVisualMap(map, solutionPath);
+            } else {
+                 System.out.println("(Map too large to visualize path in console)");
             }
         }
-        System.out.println("FINISH");
+    }
+
+    public static double calculatePathCost(MazeMap map, List<Point> path) {
+        if (path.isEmpty()) return 20000.0;
+        double cost = 0;
+        for (int i = 1; i < path.size(); i++) {
+            Point p = path.get(i);
+            cost += map.getWeight(p.r, p.c);
+        }
+        return cost;
     }
 
     public static void printVisualMap(MazeMap map, List<Point> path) {
@@ -159,17 +186,11 @@ public class DumbTest {
 
         for (int r = 0; r < map.rows; r++) {
             for (int c = 0; c < map.cols; c++) {
-                if (map.getWeight(r, c) == -1) {
-                    System.out.print(" # ");
-                } else if (r == map.start.r && c == map.start.c) {
-                    System.out.print(" S ");
-                } else if (r == map.goal.r && c == map.goal.c) {
-                    System.out.print(" G ");
-                } else if (isPath[r][c]) {
-                    System.out.print(" * ");
-                } else {
-                    System.out.print(" . ");
-                }
+                if (map.getWeight(r, c) == -1) System.out.print(" # ");
+                else if (r == map.start.r && c == map.start.c) System.out.print(" S ");
+                else if (r == map.goal.r && c == map.goal.c) System.out.print(" G ");
+                else if (isPath[r][c]) System.out.print(" * ");
+                else System.out.print(" . ");
             }
             System.out.println();
         }

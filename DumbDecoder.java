@@ -5,17 +5,12 @@ import java.util.PriorityQueue;
 
 public class DumbDecoder {
 
-    // ตัวคูณความเชื่อฟัง (Power Factor)
-    // ยิ่งเยอะ = ยิ่งเชื่อ Chromosome มาก (ยอมเดินอ้อมถ้า Priority สูง)
-    // แนะนำ 4.0 - 10.0
-    public static double ALPHA = 40; 
-
-    // Class Node ใช้ร่วมกันทั้ง GA และ Pure A*
+    public static double ALPHA = 8; 
     private static class Node implements Comparable<Node> {
         int r, c;
-        double gVirtual; // สำหรับ GA คือ Cost ที่ถูกบิดเบือน
-        double realCost; // Cost จริงเสมอ
-        double h;        // Heuristic (GA=0, A*=Manhattan)
+        double gVirtual;
+        double realCost; 
+        double h;        
         Node parent;
 
         public Node(int r, int c, double gVirtual, double realCost, double h, Node parent) {
@@ -34,10 +29,6 @@ public class DumbDecoder {
         }
     }
 
-    // ------------------------------------------------------------------------
-    // 1. GA Fitness: Blind Dijkstra (มี Queue, Backtrack ได้, แต่ไม่มีเข็มทิศ)
-    // *** เปลี่ยนจาก Loop เป็น Queue แล้ว ***
-    // ------------------------------------------------------------------------
     public static double calculateFitness(MazeMap map, Chromosome chromo, boolean useHeuristic) {
         int rows = map.rows; int cols = map.cols;
         double[][] bestVirtual = new double[rows][cols];
@@ -51,16 +42,14 @@ public class DumbDecoder {
         bestVirtual[start.r][start.c] = 0;
 
         int nodesExplored = 0;
-        int maxNodes = rows * cols * 20; // ให้โอกาสค้นหาเยอะหน่อย
+        int maxNodes = rows * cols * 20;
 
         while (!pq.isEmpty()) {
             Node current = pq.poll();
             nodesExplored++;
             
-            // ตัดจบถ้าค้นหานานเกิน (กันโปรแกรมค้าง)
             if (nodesExplored > maxNodes) return 10000 + (nodesExplored * 0.1);
 
-            // ถึง Goal: คืนค่า Cost จริง
             if (current.r == goal.r && current.c == goal.c) return current.realCost;
             
             if (current.gVirtual > bestVirtual[current.r][current.c]) continue;
@@ -75,9 +64,6 @@ public class DumbDecoder {
                 double priority = chromo.getPriority(nr, nc);
                 if (priority < 0.0001) priority = 0.0001;
                 
-                // *** สูตรยาแรง (Exponential Bias) ***
-                // ยิ่ง Priority สูง ตัวหารยิ่งน้อย -> Cost เสมือนยิ่งถูก -> อยากไป
-                // แบบนี้จะช่วยให้ GA ดัดเส้นทางได้ง่ายขึ้น
                 double factor = Math.pow(priority, ALPHA); 
                 double moveCostVirtual = weight / factor; 
 
@@ -94,9 +80,6 @@ public class DumbDecoder {
         return 10000 + (nodesExplored * 0.1);
     }
 
-    // ------------------------------------------------------------------------
-    // 2. GA Path: Logic เดียวกับด้านบน (Queue + Backtrack)
-    // ------------------------------------------------------------------------
     public static List<Point> getPath(MazeMap map, Chromosome chromo, boolean useHeuristic) {
         int rows = map.rows; int cols = map.cols;
         double[][] bestVirtual = new double[rows][cols];
@@ -146,9 +129,6 @@ public class DumbDecoder {
         return new ArrayList<>();
     }
 
-    // ------------------------------------------------------------------------
-    // 3. Greedy Seed (สำหรับ Gen 1) - คงเดิม
-    // ------------------------------------------------------------------------
     public static List<Point> getGreedyPath(MazeMap map) {
         int rows = map.rows; int cols = map.cols;
         boolean[][] visited = new boolean[rows][cols];
@@ -176,9 +156,6 @@ public class DumbDecoder {
         return new ArrayList<>();
     }
 
-    // ------------------------------------------------------------------------
-    // 4. Pure A* Benchmark (เฉลย) - คงเดิม
-    // ------------------------------------------------------------------------
     public static double runPureAStar(MazeMap map) {
         int rows = map.rows; int cols = map.cols;
         double[][] bestDist = new double[rows][cols];
@@ -211,7 +188,6 @@ public class DumbDecoder {
         return -1;
     }
     
-    // Pure A* Path - คงเดิม
     public static List<Point> getPureAStarPath(MazeMap map) {
         int rows = map.rows; int cols = map.cols;
         double[][] bestDist = new double[rows][cols];
@@ -232,8 +208,8 @@ public class DumbDecoder {
             for (int[] dir : dirs) {
                 int nr = current.r + dir[0];
                 int nc = current.c + dir[1];
+
                 if (!map.isValid(nr, nc)) continue;
-                
                 double newCost = current.realCost + map.getWeight(nr, nc);
                 if (newCost < bestDist[nr][nc]) {
                     bestDist[nr][nc] = newCost;
