@@ -33,16 +33,13 @@ public class Chromosome implements Comparable<Chromosome> {
                     case MUTATION_RANDOM:
                         genes[i] = rand.nextDouble();
                         break;
-
                     case MUTATION_FLIP:
-                        // ข้อดี: ทะลวงกำแพง เปลี่ยนทางเดินแบบหักศอกได้ดี
                         if (genes[i] > 0.5) {
                             genes[i] = rand.nextDouble() * 0.2;
                         } else {
                             genes[i] = 0.8 + (rand.nextDouble() * 0.2);
                         }
                         break;
-
                     case MUTATION_HYBRID:
                         if (rand.nextDouble() < 0.3) { 
                             if (genes[i] > 0.5) {
