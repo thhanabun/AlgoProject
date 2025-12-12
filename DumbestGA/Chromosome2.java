@@ -138,6 +138,12 @@ public class Chromosome2 implements Comparable<Chromosome2> {
         System.arraycopy(this.genes, 0, c.genes, 0, genes.length);
         System.arraycopy(this.junctionBlocks, 0, c.junctionBlocks, 0, junctionBlocks.length);
         c.fitness = this.fitness;
+        
+        // *** เพิ่มบรรทัดนี้: Copy Path จากพ่อแม่ไปด้วย ***
+        if (this.path != null) {
+            c.path = new ArrayList<>(this.path); 
+        }
+        
         return c;
     }
 

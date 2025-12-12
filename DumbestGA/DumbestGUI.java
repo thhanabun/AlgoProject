@@ -377,15 +377,24 @@ public class DumbestGUI extends JFrame {
                     ga.setMutationRate(defaultMutationRate); 
                 }
                 
-                if (stagnationCount > 20) ga.setMutationRate(0.4); 
-                if (stagnationCount > 50) { 
-                    Chromosome2 survivor = population.get(0);
-                    population = ga.initPopulation(null); 
-                    population.set(0, survivor);
-                    stagnationCount = 0;
-                } 
+                if (stagnationCount > 50) ga.setMutationRate(0.4); 
 
-                final String statusText = (stagnationCount > 20) ? "[Boost]" : "";
+                // if (stagnationCount > 50) { 
+                //     Chromosome2 survivor = population.get(0);
+                    
+                //     // *** สำคัญ: ต้องมั่นใจว่า survivor มี Path ติดตัวไปก่อนจะโดน Reset ***
+                //     if (survivor.path == null || survivor.path.isEmpty()) {
+                //         // ถ้าไม่มี ให้คำนวณใหม่เดี๋ยวนี้เลย ไม่งั้นกราฟิกหาย
+                //         survivor.path = new ArrayList<>();
+                //         DumbestDecoder.calculateFitness(map, survivor, survivor.path);
+                //     }
+
+                //     population = ga.initPopulation(null); 
+                //     population.set(0, survivor);
+                //     stagnationCount = 0;
+                // }
+
+                final String statusText = (stagnationCount > 50) ? "[Boost]" : "";
                 final int currentGen = gen;
                 final double currentFit = best.fitness;
                 

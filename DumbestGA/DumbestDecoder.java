@@ -8,7 +8,7 @@ import java.util.Random;
 
 public class DumbestDecoder {
 
-    public static double ALPHA = 4; 
+    public static double ALPHA = 2; 
     private static class Node implements Comparable<Node> {
         int r, c;
         double gVirtual;
@@ -44,7 +44,7 @@ public class DumbestDecoder {
         boolean[][] isVisited = new boolean[map.rows][map.cols];
         isVisited[curR][curC] = true;
 
-        int maxSteps = map.rows * map.cols * 2; 
+        int maxSteps = map.rows * map.cols * 3; 
         Random deterministicRand = new Random(chromo.hashCode());
 
         for (int step = 0; step < maxSteps; step++) {
@@ -72,7 +72,7 @@ public class DumbestDecoder {
                         
                     double p = chromo.getPriority(nr, nc);
                     if (p < 0.001) p = 0.001; 
-                    p = Math.pow(p, 3); 
+                    p = Math.pow(p, ALPHA); 
                     
                     validMoves.add(new Point(nr, nc));
                     probs.add(p);
@@ -93,6 +93,7 @@ public class DumbestDecoder {
                 curC = nextMove.c;
                 isVisited[curR][curC] = true;
                 path.add(new Point(curR, curC));
+                
             } else {
                 // --- BACKTRACKING ---
                 if (path.size() > 1) {
@@ -110,7 +111,7 @@ public class DumbestDecoder {
                         int nr = badR + d[0];
                         int nc = badC + d[1];
                         // นับทางออกที่ไม่ใช่กำแพง และไม่ใช่ Global Dead End
-                        if (map.isValid(nr, nc) && !GlobalKnowledge.isDeadEnd(nr, nc)) {
+                        if (map.isValid(nr, nc) && !GlobalKnowledge.isDeadEnd(nr, nc) && !(badR == map.start.r && badC == map.start.c)) { //fix start
                             openExits++;
                         }
                     }
@@ -125,9 +126,38 @@ public class DumbestDecoder {
                 }
             }
         }
+        // -----------------------------------------------------------
+        // 💀 โซนคิดคะแนนคนตาย (Fail Case)
+        // -----------------------------------------------------------
+        
+        // 1. ใช้ Manhattan Distance (เหมาะกับ Grid มากกว่า Euclidean/Sqrt)
+        //    เพราะในเขาวงกต เราเดินทะลุกำแพงไม่ได้ ต้องเดินเป็นมุมฉาก
+        double distR = Math.abs(curR - goal.r);
+        double distC = Math.abs(curC - goal.c);
+        double manhattanDist = distR + distC;
 
-        double distToGoal = Math.sqrt(Math.pow(curR - goal.r, 2) + Math.pow(curC - goal.c, 2));
-        return 5000000.0 + (distToGoal * 1000.0); 
+        // 2. Base Penalty: ลดลงมาให้สมเหตุสมผล
+        //    สมมติ Map 20x20 Weight สูงสุด 100 -> Cost สูงสุดที่เป็นไปได้คือ ~40,000
+        //    ดังนั้นตั้งค่าปรับไว้ที่ 50,000 - 100,000 ก็พอ (เพื่อให้มากกว่า Cost ของคนที่ทำสำเร็จ)
+        //    *อย่าใช้ 5 ล้าน เพราะมันทำให้ความต่างของระยะทางดูจืดจาง*
+        double basePenalty = 100000.0;
+
+        // 3. Distance Factor: ยิ่งไกล ยิ่งโดนหนัก (ใช้ยกกำลังช่วย)
+        //    การใช้กำลัง 2 (Squaring) จะทำให้ความต่างชัดเจนขึ้น
+        //    เช่น ห่าง 10 ช่อง = ปรับ 100 / ห่าง 20 ช่อง = ปรับ 400
+        //    GA จะแยกแยะ "ตัวที่เกือบถึง" กับ "ตัวที่หลงทาง" ได้เก่งขึ้น
+        double distancePenalty = Math.pow(manhattanDist, 2) * 10.0; 
+
+        // 4. (Optional) Penalize Backtracking to Start
+        //    ถ้า stack ว่าง (ถอยกลับมาจุดเริ่ม) แปลว่าหาทางไม่ได้เลย ให้ปรับหนักสุด
+        if (path.isEmpty()) {
+            return basePenalty * 2; 
+        }
+
+        return basePenalty + distancePenalty;
+
+        // double distToGoal = Math.sqrt(Math.pow(curR - goal.r, 2) + Math.pow(curC - goal.c, 2));
+        // return 5000000.0 + (distToGoal * 1000.0); 
     }
 
 

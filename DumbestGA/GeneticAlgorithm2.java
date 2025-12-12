@@ -47,10 +47,20 @@ public class GeneticAlgorithm2 {
         
         // 1. Elitism
         for (int i = 0; i < elitismCount; i++) {
-            newPopulation.add(population.get(i).clone());
+            Chromosome2 original = population.get(i);
+            Chromosome2 clone = original.clone();
+            
+            // *** กันเหนียว: ถ้า Clone มาแล้ว Path หาย ให้ก๊อปไปใส่ ***
+            if (clone.path == null || clone.path.isEmpty()) {
+                if (original.path != null) {
+                    clone.path = new ArrayList<>(original.path);
+                }
+            }
+            
+            newPopulation.add(clone);
         }
 
-        int freshBloodCount = (int)(popSize * 0.1); 
+        int freshBloodCount = (int)(popSize * 0); 
         int breedCount = popSize - elitismCount - freshBloodCount;
 
         // 2. Breeding
