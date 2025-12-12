@@ -1,3 +1,5 @@
+package Optimization;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -29,7 +31,7 @@ public class DumbDecoder {
         }
     }
 
-    public static double calculateFitness(MazeMap map, Chromosome chromo, boolean useHeuristic) {
+    public static double calculateFitness(MazeMapOp map, Chromosome chromo, boolean useHeuristic) {
         int rows = map.rows; int cols = map.cols;
         double[][] bestVirtual = new double[rows][cols];
         for(int i=0; i<rows; i++) for(int j=0; j<cols; j++) bestVirtual[i][j] = Double.MAX_VALUE;
@@ -80,7 +82,7 @@ public class DumbDecoder {
         return 10000 + (nodesExplored * 0.1);
     }
 
-    public static List<Point> getPath(MazeMap map, Chromosome chromo, boolean useHeuristic) {
+    public static List<Point> getPath(MazeMapOp map, Chromosome chromo, boolean useHeuristic) {
         int rows = map.rows; int cols = map.cols;
         double[][] bestVirtual = new double[rows][cols];
         for(int i=0; i<rows; i++) for(int j=0; j<cols; j++) bestVirtual[i][j] = Double.MAX_VALUE;
@@ -129,7 +131,7 @@ public class DumbDecoder {
         return new ArrayList<>();
     }
 
-    public static List<Point> getGreedyPath(MazeMap map) {
+    public static List<Point> getGreedyPath(MazeMapOp map) {
         int rows = map.rows; int cols = map.cols;
         boolean[][] visited = new boolean[rows][cols];
         PriorityQueue<Node> pq = new PriorityQueue<>();
@@ -156,7 +158,7 @@ public class DumbDecoder {
         return new ArrayList<>();
     }
 
-    public static double runPureAStar(MazeMap map) {
+    public static double runPureAStar(MazeMapOp map) {
         int rows = map.rows; int cols = map.cols;
         double[][] bestDist = new double[rows][cols];
         for(int i=0; i<rows; i++) for(int j=0; j<cols; j++) bestDist[i][j] = Double.MAX_VALUE;
@@ -188,7 +190,7 @@ public class DumbDecoder {
         return -1;
     }
     
-    public static List<Point> getPureAStarPath(MazeMap map) {
+    public static List<Point> getPureAStarPath(MazeMapOp map) {
         int rows = map.rows; int cols = map.cols;
         double[][] bestDist = new double[rows][cols];
         for(int i=0; i<rows; i++) for(int j=0; j<cols; j++) bestDist[i][j] = Double.MAX_VALUE;
@@ -220,7 +222,7 @@ public class DumbDecoder {
         return new ArrayList<>();
     }
 
-    public static List<Point> getDijkstraPath(MazeMap map) {
+    public static List<Point> getDijkstraPath(MazeMapOp map) {
         int rows = map.rows; int cols = map.cols;
         double[][] bestDist = new double[rows][cols];
         for(int i=0; i<rows; i++) for(int j=0; j<cols; j++) bestDist[i][j] = Double.MAX_VALUE;
