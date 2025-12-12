@@ -1,8 +1,10 @@
+package DumbestGA;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.PriorityQueue;
+import java.util.Random;
 
 public class DumbestDecoder {
 
@@ -30,16 +32,6 @@ public class DumbestDecoder {
         }
     }
     
-    
-    private static class MoveOption {
-        Point p;
-        double priority;
-        public MoveOption(Point p, double priority) {
-            this.p = p;
-            this.priority = priority;
-        }
-    }
-
     public static double calculateFitness(MazeMap map, Chromosome2 chromo, List<Point> path) {
         path.clear();
         Point start = map.start;
@@ -53,66 +45,97 @@ public class DumbestDecoder {
         isVisited[curR][curC] = true;
 
         int maxSteps = map.rows * map.cols * 2; 
-        
+        Random deterministicRand = new Random(chromo.hashCode());
+
         for (int step = 0; step < maxSteps; step++) {
             
-            // --- WINNER ---
             if (curR == goal.r && curC == goal.c) {
-                // *** คำนวณ Distance (Cost) ของจริงตรงนี้ครับ ***
                 double totalCost = 0;
-                for (Point p : path) {
-                    totalCost += map.getWeight(p.r, p.c);
-                }
-                return totalCost; // ยิ่งน้อยยิ่งดี
+                for (Point p : path) totalCost += map.getWeight(p.r, p.c);
+                return totalCost;
             }
 
-            List<MoveOption> options = new ArrayList<>();
+            List<Point> validMoves = new ArrayList<>();
+            List<Double> probs = new ArrayList<>();
+            double sumPriority = 0;
+
             int[][] dirs = {{-1,0}, {1,0}, {0,-1}, {0,1}}; 
 
             for (int[] d : dirs) {
                 int nr = curR + d[0];
                 int nc = curC + d[1];
 
-                if (map.isValid(nr, nc) && !isVisited[nr][nc]) {
+                // เช็ค: เดินได้ + ไม่เคยมา + ไม่ใช่ Global Dead End + ไม่ใช่ Junction Block ส่วนตัว
+                if (map.isValid(nr, nc) && !isVisited[nr][nc] 
+                    && !GlobalKnowledge.isDeadEnd(nr, nc) 
+                    && !chromo.isMyBlock(nr, nc)) {
+                        
                     double p = chromo.getPriority(nr, nc);
-                    options.add(new MoveOption(new Point(nr, nc), p));
+                    if (p < 0.001) p = 0.001; 
+                    p = Math.pow(p, 3); 
+                    
+                    validMoves.add(new Point(nr, nc));
+                    probs.add(p);
+                    sumPriority += p;
                 }
             }
 
-            if (!options.isEmpty()) {
-                // เรียงลำดับความน่าจะเป็น (มาก -> น้อย)
-                // นี่คือหัวใจของ Deterministic GA: "ยีนสั่งมาแบบไหน ต้องเดินแบบนั้น"
-                options.sort((a, b) -> Double.compare(b.priority, a.priority));
-
-                MoveOption bestMove = options.get(0);
-                
-                curR = bestMove.p.r;
-                curC = bestMove.p.c;
-                
+            if (!validMoves.isEmpty()) {
+                double randVal = deterministicRand.nextDouble() * sumPriority;
+                double runningSum = 0;
+                int selectedIdx = validMoves.size() - 1;
+                for (int i = 0; i < validMoves.size(); i++) {
+                    runningSum += probs.get(i);
+                    if (randVal <= runningSum) { selectedIdx = i; break; }
+                }
+                Point nextMove = validMoves.get(selectedIdx);
+                curR = nextMove.r;
+                curC = nextMove.c;
                 isVisited[curR][curC] = true;
                 path.add(new Point(curR, curC));
-                
             } else {
                 // --- BACKTRACKING ---
                 if (path.size() > 1) {
-                    path.remove(path.size() - 1); // ถอยหลัง
+                    int badR = curR;
+                    int badC = curC;
+                    
+                    path.remove(path.size() - 1); 
                     Point prev = path.get(path.size() - 1);
                     curR = prev.r;
                     curC = prev.c;
-                    // ไม่ต้องแก้ isVisited คืน (จำว่าตันแล้ว)
+                    
+                    // --- GLOBAL LEARNING ---
+                    int openExits = 0;
+                    for (int[] d : dirs) {
+                        int nr = badR + d[0];
+                        int nc = badC + d[1];
+                        // นับทางออกที่ไม่ใช่กำแพง และไม่ใช่ Global Dead End
+                        if (map.isValid(nr, nc) && !GlobalKnowledge.isDeadEnd(nr, nc)) {
+                            openExits++;
+                        }
+                    }
+
+                    // ถ้ามีทางออก <= 1 (คือทางที่ถอยมา) = ตันจริง -> บอกโลกรู้เลย!
+                    if (openExits <= 1) {
+                        GlobalKnowledge.markDeadEnd(badR, badC);
+                    }
+                    
                 } else {
-                    break; // กลับมาจุดเริ่มต้น -> หมดหนทาง
+                    break; 
                 }
             }
         }
 
-        // --- LOSER SCORE ---
         double distToGoal = Math.sqrt(Math.pow(curR - goal.r, 2) + Math.pow(curC - goal.c, 2));
-        
-        // Base Penalty 1 ล้าน + ระยะห่าง
-        return 1000000.0 + (distToGoal * 100.0); 
+        return 5000000.0 + (distToGoal * 1000.0); 
     }
 
+
+    public static List<Point> getPath(MazeMap map, Chromosome2 c, boolean b) {
+        List<Point> p = new ArrayList<>();
+        calculateFitness(map, c, p);
+        return p;
+    }
 
     public static List<Point> getGreedyPath(MazeMap map) {
         int rows = map.rows; int cols = map.cols;
