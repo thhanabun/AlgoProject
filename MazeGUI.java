@@ -20,7 +20,9 @@ public class MazeGUI extends JFrame {
     private AlgorithmStatusPanel statusAStar;
     private AlgorithmStatusPanel statusGA;
 
-    private List<Point> cachedGAPath = null;
+    private List<Point> lastGreedyPath = null; 
+    private List<Point> lastAStarPath = null;  
+    private List<Point> lastGAPath = null;
     private double cachedGAFitness = 0;
     private List<List<Point>> genPath = new ArrayList<>();
     private List<Double> genFitness = new ArrayList<>();
@@ -35,6 +37,9 @@ public class MazeGUI extends JFrame {
 
     // GUI Components
     private JComboBox<String> generationSelector;
+    private JCheckBox chkShowGreedy;
+    private JCheckBox chkShowAStar;
+    private JCheckBox chkShowGA;
     private JButton btnBack;
     private JButton btnReset;
     private JButton btnGreedy;
@@ -78,15 +83,14 @@ public class MazeGUI extends JFrame {
         if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             Mazereader mr = new Mazereader();
             this.currentMap = new MazeMap(mr.read(fileChooser.getSelectedFile().getAbsolutePath()));
-            cachedGAPath = null;
+            lastGAPath = null;
+            lastGreedyPath = null;
+            lastAStarPath = null;
             genPath.clear();
             if (currentMap != null) buildAndShowMaze(currentMap);
         }
     }
 
-    // ==========================================
-    // SCREEN 2: BUILDING THE MAZE UI
-    // ==========================================
     private void buildAndShowMaze(MazeMap map) {
         JPanel mazeGridPanel = new JPanel(new GridLayout(map.rows, map.cols));
         mazeGridPanel.setPreferredSize(new Dimension(map.cols * CELL_SIZE, map.rows * CELL_SIZE));
@@ -105,8 +109,29 @@ public class MazeGUI extends JFrame {
         btnGA = new JButton("Run GA");
         btnSettings = new JButton("Settings");
 
+        JPanel layersPanel = new JPanel(new GridLayout(3, 1));
+        layersPanel.setBorder(BorderFactory.createTitledBorder("Show Layers"));
         JPanel replayPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         replayPanel.setBorder(BorderFactory.createTitledBorder("Generation Replay"));
+
+        chkShowGreedy = new JCheckBox("Greedy (Blue)");
+        chkShowGreedy.setForeground(Color.BLUE);
+        chkShowGreedy.setSelected(true);
+        chkShowGreedy.addActionListener(e -> refreshMazeView());
+
+        chkShowAStar = new JCheckBox("A* (Orange)");
+        chkShowAStar.setForeground(Color.ORANGE.darker());
+        chkShowAStar.setSelected(true);
+        chkShowAStar.addActionListener(e -> refreshMazeView());
+
+        chkShowGA = new JCheckBox("GA (Green)");
+        chkShowGA.setForeground(Color.GREEN.darker());
+        chkShowGA.setSelected(true);
+        chkShowGA.addActionListener(e -> refreshMazeView());
+
+        layersPanel.add(chkShowGreedy);
+        layersPanel.add(chkShowAStar);
+        layersPanel.add(chkShowGA);
 
         generationSelector = new JComboBox<>();
         generationSelector.setPreferredSize(new Dimension(150, 25));
@@ -140,33 +165,37 @@ public class MazeGUI extends JFrame {
 
         controlPanel.add(btnBack);
         controlPanel.add(btnReset);
-        controlPanel.add(Box.createHorizontalStrut(20));
+        controlPanel.add(Box.createHorizontalStrut(10));
         controlPanel.add(btnGreedy);
         controlPanel.add(btnAStar);
         controlPanel.add(btnGA);
-        controlPanel.add(btnSettings);
+        controlPanel.add(Box.createHorizontalStrut(10));
+        controlPanel.add(layersPanel); // Add Checkboxes
         controlPanel.add(replayPanel);
+        controlPanel.add(btnSettings);
 
         btnGreedy.addActionListener(e -> {
             resetGridColors();
             List<Point> path = DumbDecoder.getGreedyPath(map);
-            drawPath(path, Color.BLUE);
+            lastGreedyPath = path; // Save to specific variable
+            refreshMazeView();
             statusGreedy.updateStats(path, map);
         });
 
         btnAStar.addActionListener(e -> {
             resetGridColors();
             List<Point> path = DumbDecoder.getPureAStarPath(map);
-            drawPath(path, Color.ORANGE);
+            lastAStarPath = path;  // Save to specific variable
+            refreshMazeView();
             statusAStar.updateStats(path, map);
         });
 
         btnGA.addActionListener(e -> {
             resetGridColors();
-            if (cachedGAPath != null) {
+            if (lastGAPath != null) {
                 populateDropdownAndSelectLast();
-                drawPath(cachedGAPath, Color.GREEN.darker());
-                statusGA.updateStatsLive(gaMaxGenerations, gaMaxGenerations, cachedGAPath, map, cachedGAFitness, "Cached Result");
+                refreshMazeView();
+                statusGA.updateStatsLive(gaMaxGenerations, gaMaxGenerations, lastGAPath, map, cachedGAFitness, "Cached Result");
             } else {
                 runRealTimeGA(map);
             }
@@ -174,7 +203,7 @@ public class MazeGUI extends JFrame {
 
         btnReset.addActionListener(e -> {
             resetGridColors();
-            cachedGAPath = null;
+            lastGAPath = null;
             genPath.clear();
             genFitness.clear();
             generationSelector.removeAllItems();
@@ -195,6 +224,21 @@ public class MazeGUI extends JFrame {
         cardLayout.show(mainContainer, MAZE_PANEL);
     }
 
+    private void refreshMazeView() {
+        resetGridColors();
+        if (chkShowGA.isSelected() && lastGAPath != null) {
+            drawPath(lastGAPath, Color.GREEN.darker());
+        }
+        if (chkShowGreedy.isSelected() && lastGreedyPath != null) {
+            drawPath(lastGreedyPath, Color.BLUE);
+        }
+        
+        if (chkShowAStar.isSelected() && lastAStarPath != null) {
+            drawPath(lastAStarPath, Color.ORANGE);
+        }
+        
+    }
+
     private void setControlsEnabled(boolean enabled) {
         btnBack.setEnabled(enabled);
         btnReset.setEnabled(enabled);
@@ -202,7 +246,12 @@ public class MazeGUI extends JFrame {
         btnAStar.setEnabled(enabled);
         btnGA.setEnabled(enabled);
         btnSettings.setEnabled(enabled);
-        generationSelector.setEnabled(enabled && cachedGAPath != null);
+        
+        chkShowGreedy.setEnabled(enabled);
+        chkShowAStar.setEnabled(enabled);
+        chkShowGA.setEnabled(enabled);
+        
+        generationSelector.setEnabled(enabled && !genPath.isEmpty()); 
     }
 
     private void populateDropdownAndSelectLast() {
@@ -218,11 +267,13 @@ public class MazeGUI extends JFrame {
     }
 
     private void updateMazeToGeneration(int index) {
-        resetGridColors();
-        List<Point> historicalPath = genPath.get(index);
+        // Temporarily update the "cached" path to the historical one so the checkbox logic works
+        lastGAPath = genPath.get(index);
         double historicalFit = genFitness.get(index);
-        drawPath(historicalPath, Color.GREEN.darker());
-        statusGA.updateStatsLive(index + 1, gaMaxGenerations, historicalPath, currentMap, historicalFit, "Replay Mode");
+        
+        refreshMazeView(); // Uses the updated cachedGAPath
+        
+        statusGA.updateStatsLive(index + 1, gaMaxGenerations, lastGAPath, currentMap, historicalFit, "Replay Mode");
     }
 
     private void showGASettings() {
@@ -252,7 +303,7 @@ public class MazeGUI extends JFrame {
                 gacCossoverRate = Double.parseDouble(txtCro.getText());
                 gaMutationMode = Integer.parseInt(txtMode.getText());
                 
-                cachedGAPath = null;
+                lastGAPath = null;
                 genPath.clear();
                 generationSelector.removeAllItems();
                 generationSelector.addItem("Settings Changed");
@@ -320,8 +371,8 @@ public class MazeGUI extends JFrame {
                 final double currentFit = best.fitness;
                 
                 SwingUtilities.invokeLater(() -> {
-                    resetGridColors();
-                    drawPath(visualPath, Color.GREEN.darker());
+                    lastGAPath = visualPath;
+                    refreshMazeView(); 
                     statusGA.updateStatsLive(currentGen, maxGenerations, visualPath, map, currentFit, statusText);
                 });
 
@@ -330,7 +381,7 @@ public class MazeGUI extends JFrame {
             
             Chromosome finalBest = population.get(0);
             List<Point> finalPath = DumbDecoder.getPath(map, finalBest, true);
-            cachedGAPath = new ArrayList<>(finalPath);
+            lastGAPath = new ArrayList<>(finalPath);
             cachedGAFitness = finalBest.fitness;
             
             SwingUtilities.invokeLater(() -> {
@@ -355,7 +406,7 @@ public class MazeGUI extends JFrame {
                 
                 if(val > 0) {
                     JLabel lbl = new JLabel(String.valueOf(val));
-                    lbl.setFont(new Font("Arial", Font.PLAIN, 8));
+                    lbl.setFont(new Font("Arial", Font.PLAIN, 5));
                     lbl.setHorizontalAlignment(JLabel.CENTER);
                     cell.add(lbl);
                 }
