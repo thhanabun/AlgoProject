@@ -1,4 +1,3 @@
-package Optimization;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -86,6 +85,20 @@ public class MazeRenderPanel extends JPanel {
                 }
             }
         }
+        public void overlayPoints(List<Point> points, Color c) {
+        if (points == null || points.isEmpty()) return;
+        
+        int rgb = c.getRGB();
+        
+        for (Point p : points) {
+            // Verify bounds to prevent crashes
+            if (p.c >= 0 && p.c < cols && p.r >= 0 && p.r < rows) {
+                // Set the pixel color directly. 
+                // paintComponent will handle scaling this up to the zoom factor.
+                viewImage.setRGB(p.c, p.r, rgb);
+            }
+        }
+    }
 
         @Override
         protected void paintComponent(Graphics g) {

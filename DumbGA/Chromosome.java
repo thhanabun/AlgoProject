@@ -1,4 +1,4 @@
-
+package DumbGA;
 import java.util.Random;
 
 public class Chromosome implements Comparable<Chromosome> {

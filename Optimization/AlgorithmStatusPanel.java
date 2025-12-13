@@ -9,7 +9,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.border.TitledBorder;
 
-class AlgorithmStatusPanel extends JPanel {
+public class AlgorithmStatusPanel extends JPanel {
         private JLabel dataLabel;
         
         public AlgorithmStatusPanel(String title) {
@@ -23,7 +23,7 @@ class AlgorithmStatusPanel extends JPanel {
             add(dataLabel, BorderLayout.CENTER);
         }
 
-        public void updateStats(List<Point> path, MazeMapOp map) {
+        public void updateStats(List<Point> path, MazeMap map) {
         if (path == null || path.isEmpty()) {
             dataLabel.setText("No Path Found");
             return;
@@ -39,7 +39,7 @@ class AlgorithmStatusPanel extends JPanel {
         dataLabel.setText(String.format("<html><b>Steps:</b> %d<br><b>Cost:</b> %d</html>", path.size(), totalCost));
     }
 
-        public void updateStatsLive(int gen, int maxGen, List<Point> path, MazeMapOp map, double fitness, String status) {
+        public void updateStatsLive(int gen, int maxGen, List<Point> path, MazeMap map, double fitness, String status) {
         int totalCost = 0;
         if (path != null) {
             for (Point p : path) {

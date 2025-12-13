@@ -1,3 +1,4 @@
+package Basic;
 
 import java.awt.BorderLayout;
 import java.awt.Font;
@@ -8,7 +9,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.border.TitledBorder;
 
-public class AlgorithmStatusPanel extends JPanel {
+class AlgorithmStatusPanel extends JPanel {
         private JLabel dataLabel;
         
         public AlgorithmStatusPanel(String title) {

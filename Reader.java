@@ -1,10 +1,10 @@
-package Basic;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 
-public class MazeReader {
+public class Reader {
 
     public int[][] read(String filePath) {
         try {
@@ -128,5 +128,4 @@ public class MazeReader {
             return Arrays.copyOf(data, size);
         }
     }
-    
 }

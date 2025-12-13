@@ -1,11 +1,10 @@
 package Basic;
-import java.util.ArrayList;
 
 public class BasicMain {
     public static void main(String[] args) {
-        Mazereader mr = new Mazereader();
-        ArrayList<ArrayList<Integer>> mapRaw = mr.read("MAZE\\m100_100.txt");
-        MazeMap maze = new MazeMap(mapRaw);
+        MazeReader mr = new MazeReader();
+      
+        MazeMap maze = new MazeMap(mr.read("MAZE\\m100_100.txt"));
 
         int populationSize = 200;
         int geneLength = maze.rows * maze.cols * 2;

@@ -134,7 +134,7 @@ public class Reader {
         Reader mr = new Reader();
         // Replace with your actual path
         int[][] maze = mr.read("MAZE\\maze1000_1000.txt"); 
-        MazeMapOp mz = new MazeMapOp(maze);
+        MazeMap mz = new MazeMap(maze);
         System.out.println(mz.cols);
         System.out.println(mz.rows);
         for (int i = 0; i < mz.rows; i++) {

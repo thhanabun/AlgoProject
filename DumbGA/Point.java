@@ -1,5 +1,4 @@
-
-
+package DumbGA;
 public class Point {
     public int r; 
     public int c;

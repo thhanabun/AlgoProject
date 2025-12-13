@@ -1,4 +1,4 @@
-import java.util.ArrayList;
+
 
 public class MazeMap {
     public int[][] grid;
@@ -7,17 +7,11 @@ public class MazeMap {
     public Point start;
     public Point goal;
 
-    public MazeMap(ArrayList<ArrayList<Integer>> rawData) {
-        this.rows = rawData.size();
-        this.cols = rawData.get(0).size();
-        this.grid = new int[rows][cols];
+    public MazeMap(int[][] rawData) {
+        this.rows = rawData.length;
+        this.cols = rawData[0].length;
+        this.grid = rawData;
 
-        for (int r = 0; r < rows; r++) {
-            ArrayList<Integer> rowList = rawData.get(r);
-            for (int c = 0; c < cols; c++) {
-                this.grid[r][c] = rowList.get(c);
-            }
-        }
 
         this.start = new Point(1, 1);
         this.goal = new Point(rows - 2, cols - 2);

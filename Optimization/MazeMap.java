@@ -1,14 +1,14 @@
 package Optimization;
 
 
-public class MazeMapOp {
+public class MazeMap {
     public int[][] grid;
     public int rows;
     public int cols;
     public Point start;
     public Point goal;
 
-    public MazeMapOp(int[][] rawData) {
+    public MazeMap(int[][] rawData) {
         this.rows = rawData.length;
         this.cols = rawData[0].length;
         this.grid = rawData;

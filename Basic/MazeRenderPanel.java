@@ -1,4 +1,4 @@
-package Optimization;
+package Basic;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -10,7 +10,7 @@ import java.awt.image.BufferedImage;
 
 import javax.swing.JPanel;
 
-public class MazeRenderPanel extends JPanel {
+class MazeRenderPanel extends JPanel {
         private BufferedImage baseImage;  // Stores just the walls (Static at 1:1)
         private BufferedImage viewImage;  // Stores walls + paths (Dynamic at 1:1)
         private int cols, rows;

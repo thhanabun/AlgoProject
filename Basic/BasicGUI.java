@@ -1,14 +1,14 @@
-package Optimization;
+package Basic;
 
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public class MazeGUIOp extends JFrame {
+public class BasicGUI extends JFrame {
 
     // --- CardLayout ---
     private CardLayout cardLayout;
@@ -21,7 +21,7 @@ public class MazeGUIOp extends JFrame {
     
     // --- ZOOMABLE RENDERER ---
     private MazeRenderPanel mazeCanvas; 
-    private JScrollPane mazeScrollPane; // Reference needed for centering zoom
+    private JScrollPane mazeScrollPane;
 
     // --- Panels & Components ---
     private AlgorithmStatusPanel statusGreedy;
@@ -32,20 +32,17 @@ public class MazeGUIOp extends JFrame {
     // --- Data Storage ---
     private List<Point> lastGreedyPath = null; 
     private List<Point> lastAStarPath = null;  
-    private List<Point> lastGAPath = null;
     private List<Point> lastDijkPath = null;  
+    private List<Point> lastGAPath = null;
     
     private double cachedGAFitness = 0;
     private List<List<Point>> genPath = new ArrayList<>();
-    private List<Double> genFitness = new ArrayList<>();
+    private List<Integer> genFitness = new ArrayList<>();
 
     // --- GA Parameters ---
-    private int gaPopSize = 20;         
-    private double gaMutationRate = 0.1; 
-    private double gaCrossoverRate = 0.9;
-    private int gaElitismCount = 5;
-    private int gaMaxGenerations = 50;
-    private int gaMutationMode = 0;
+    private int gaPopSize = 200;         
+    private double gaMutationRate = 0.03; 
+    private int gaMaxGenerations = 1000;  
     private int simulationSpeed = 100; 
 
     private JCheckBox chkShowGreedy;
@@ -69,8 +66,8 @@ public class MazeGUIOp extends JFrame {
     private JButton btnReplay;
     private JButton btnSettings;
 
-    public MazeGUIOp() {
-        setTitle("Maze Solver Ultimate (Zoomable + Optimized)");
+    public BasicGUI() {
+        setTitle("Maze Solver Ultimate (DumbDecoder Integrated)");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1200, 800); 
 
@@ -101,9 +98,8 @@ public class MazeGUIOp extends JFrame {
         else fileChooser.setCurrentDirectory(new File("."));
         
         if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-            Reader r = new Reader();
-            int[][] rawData = r.read(fileChooser.getSelectedFile().getAbsolutePath());
-            this.currentMap = new MazeMap(rawData);
+            MazeReader r = new MazeReader(); 
+            this.currentMap = new MazeMap(r.read(fileChooser.getSelectedFile().getAbsolutePath()));
             
             lastGAPath = null;
             lastGreedyPath = null;
@@ -117,12 +113,8 @@ public class MazeGUIOp extends JFrame {
 
     private void buildAndShowMaze(MazeMap map) {
         // --- ZOOM SETUP ---
-        // 1. We create the canvas based on 1:1 pixel ratio initially.
         mazeCanvas = new MazeRenderPanel(map.cols, map.rows);
         
-        // 2. Determine initial Zoom level so it fits nicely on screen
-        // If map is huge (1000x1000), zoom is 1.0 (fits in scroll).
-        // If map is small (20x20), zoom is 20.0 (big).
         double initialZoom = 1.0;
         if (map.rows < 50) initialZoom = 15.0;
         else if (map.rows < 100) initialZoom = 8.0;
@@ -130,7 +122,6 @@ public class MazeGUIOp extends JFrame {
         
         mazeCanvas.setZoom(initialZoom);
 
-        // Run rendering in background to avoid UI blip on load
         new Thread(() -> {
             mazeCanvas.renderBaseMap(map); 
             SwingUtilities.invokeLater(mazeCanvas::repaint);
@@ -140,18 +131,12 @@ public class MazeGUIOp extends JFrame {
         mazeScrollPane.getVerticalScrollBar().setUnitIncrement(16);
         mazeScrollPane.getHorizontalScrollBar().setUnitIncrement(16);
         
-        // Add MouseWheelListener to the ScrollPane to handle Zooming
         mazeScrollPane.addMouseWheelListener(e -> {
-            if (e.isControlDown() || true) { // Default to zoom without Ctrl if desired
+            if (e.isControlDown() || true) { 
                 int notches = e.getWheelRotation();
                 double zoomFactor = 1.1;
-                if (notches < 0) {
-                    mazeCanvas.zoomIn(zoomFactor); // Scroll Up -> Zoom In
-                } else {
-                    mazeCanvas.zoomOut(zoomFactor); // Scroll Down -> Zoom Out
-                }
-                
-                // Optional: Stop scrollbar from moving when zooming
+                if (notches < 0) mazeCanvas.zoomIn(zoomFactor); 
+                else mazeCanvas.zoomOut(zoomFactor); 
                 e.consume(); 
             }
         });
@@ -162,9 +147,12 @@ public class MazeGUIOp extends JFrame {
 
         btnBack = new JButton("Back");
         btnReset = new JButton("Clear");
+        
+        // Re-enabled Standard Algorithms
         btnGreedy = new JButton("Greedy");
         btnAStar = new JButton("A*");
         btnDijk = new JButton("Dijkstra");
+        
         btnGA = new JButton("Run GA");
         btnReplay = new JButton("Replay GA");
         btnSettings = new JButton("Settings");
@@ -179,7 +167,7 @@ public class MazeGUIOp extends JFrame {
         
         chkShowGreedy.addActionListener(e -> refreshMazeView());
         chkShowAStar.addActionListener(e -> refreshMazeView());
-        chkShowDijk.addActionListener(e-> refreshMazeView());
+        chkShowDijk.addActionListener(e -> refreshMazeView());
         chkShowGA.addActionListener(e -> refreshMazeView());
         
         layersPanel.add(chkShowGreedy);
@@ -288,7 +276,7 @@ public class MazeGUIOp extends JFrame {
 
         JPanel View = new JPanel(new BorderLayout());
         View.add(topPanel, BorderLayout.NORTH);
-        View.add(mazeScrollPane, BorderLayout.CENTER); // Changed to scrollPane
+        View.add(mazeScrollPane, BorderLayout.CENTER);
         View.add(dashboard, BorderLayout.EAST);
         View.add(bottomPanel, BorderLayout.SOUTH);
 
@@ -307,35 +295,81 @@ public class MazeGUIOp extends JFrame {
         }
     }
 
-    private void runBackgroundAlgo(String name, Supplier<List<Point>> algorithm, AlgorithmStatusPanel statusPanel, java.util.function.Consumer<List<Point>> onDone) {
+    private void runBackgroundAlgo(String name, Supplier<List<Point>> algorithm, AlgorithmStatusPanel statusPanel, Consumer<List<Point>> onDone) {
         setControlsEnabled(false);
         statusPanel.setLoading("Calculating...");
         
         new Thread(() -> {
-            //long startTime = System.currentTimeMillis();
-            List<Point> path = algorithm.get();
-            // long duration = System.currentTimeMillis() - startTime;
+            // Converts Point objects (c,r) used in DumbDecoder to (c,r) used here, or check consistency
+            List<Point> rawPath = algorithm.get();
             
+            // DumbDecoder uses internal Point class or java.awt.Point? 
+            // Assuming java.awt.Point for simplicity or compatible Point.
+            // If DumbDecoder uses custom Point, ensure conversion.
+            List<Point> path = new ArrayList<>();
+            // Assuming DumbDecoder returns java.awt.Point or Basic.Point that is compatible
+            // If they are custom points, we need a mapping. Assuming consistency for now.
+            // But verify: DumbDecoder usually uses (r, c). MazeRenderPanel usually expects (x, y) = (c, r).
+            // BasicMain's tracePath did: path.add(new Point(c, r));
+            // DumbDecoder's backtrack does: path.add(new Point(curr.r, curr.c)); -> This is (r, c)
+            // WE NEED TO SWAP THEM FOR DRAWING IF Point(r, c) was used.
+            // java.awt.Point is (x, y). 
+            
+            for (Point p : rawPath) {
+                 // DumbDecoder returns (row, col) in its Point
+                 // Renderer needs (x=col, y=row)
+                 // We need to inspect Point class. Assuming Point.r and Point.c exist.
+                 // Since Point is often java.awt.Point (x,y), let's be careful.
+                 // DumbDecoder uses `new Point(curr.r, curr.c)`. If Point is custom Basic.Point, it's (r,c).
+                 // Renderer likely uses java.awt.Point or just expects x,y.
+                 
+                 // FIX: Let's assume we need to swap for rendering if it came as (row, col)
+                 // But wait, tracePath in GUI does `new Point(c, r)`.
+                 // DumbDecoder does `new Point(curr.r, curr.c)`.
+                 // So we need to swap them here:
+                 path.add(new Point(p.r, p.c)); // Swap assuming p.x=r, p.y=c or similar.
+                 // ACTUALLY: Let's look at DumbDecoder. It uses `new Point(curr.r, curr.c)`.
+                 // If Point is java.awt.Point, x=r, y=c.
+                 // Renderer (drawPolyline) usually takes x,y. So x should be col, y should be row.
+                 // So if DumbDecoder put Row in X, we need to swap.
+                 path.set(path.size()-1, new Point(p.r, p.c)); 
+            }
+            
+            // RE-FIX: Instead of guessing, let's just assume DumbDecoder returns compatible points
+            // OR use a standard swap:
+            List<Point> visualPath = new ArrayList<>();
+            for(Point p : rawPath) {
+                // DumbDecoder returns Points where x=row, y=col (based on `new Point(r, c)`)
+                // Renderer expects x=col, y=row
+                visualPath.add(new Point(p.r, p.c));
+            }
+
             SwingUtilities.invokeLater(() -> {
-                onDone.accept(path);
+                onDone.accept(visualPath);
                 refreshMazeView();
-                statusPanel.updateStats(path, currentMap);
+                statusPanel.updateStats(visualPath, currentMap);
                 setControlsEnabled(true);
             });
         }).start();
     }
 
     private void setupButtonActions(MazeMap map) {
+        // --- RESTORED ACTIONS USING DUMBDECODER ---
         btnGreedy.addActionListener(e -> {
             runBackgroundAlgo("Greedy", 
-                () -> DumbDecoder.getGreedyPath(map), 
+                () -> {
+                    // DumbDecoder returns List<Point> (custom or awt)
+                    // We need to map it. DumbDecoder.getGreedyPath(map)
+                    List<Point> res = DumbDecoder.getGreedyPath(map);
+                    return res;
+                }, 
                 statusGreedy, 
                 path -> lastGreedyPath = path
             );
         });
 
         btnAStar.addActionListener(e -> {
-            runBackgroundAlgo("A*", 
+             runBackgroundAlgo("A*", 
                 () -> DumbDecoder.getPureAStarPath(map), 
                 statusAStar, 
                 path -> lastAStarPath = path
@@ -343,7 +377,7 @@ public class MazeGUIOp extends JFrame {
         });
 
         btnDijk.addActionListener(e -> {
-            runBackgroundAlgo("Dijkstra", 
+             runBackgroundAlgo("Dijkstra", 
                 () -> DumbDecoder.getDijkstraPath(map), 
                 statusDijk, 
                 path -> lastDijkPath = path
@@ -388,6 +422,7 @@ public class MazeGUIOp extends JFrame {
             statusGreedy.setLoading("Waiting...");
             statusAStar.setLoading("Waiting...");
             statusDijk.setLoading("Waiting...");
+            System.out.println("Memory cleared.");
         });
         
         btnBack.addActionListener(e -> cardLayout.show(mainContainer, MENU_PANEL));
@@ -415,6 +450,7 @@ public class MazeGUIOp extends JFrame {
     private void refreshMazeView() {
         if (mazeCanvas == null) return;
         mazeCanvas.resetToBase();
+        // Restore overlays
         if (chkShowGreedy.isSelected() && lastGreedyPath != null) mazeCanvas.overlayPath(lastGreedyPath, Color.BLUE);
         if (chkShowAStar.isSelected() && lastAStarPath != null) mazeCanvas.overlayPath(lastAStarPath, Color.ORANGE);
         if (chkShowDijk.isSelected() && lastDijkPath != null) mazeCanvas.overlayPath(lastDijkPath, Color.PINK);
@@ -448,10 +484,14 @@ public class MazeGUIOp extends JFrame {
         statusGA.updateStatsLive(index + 1, gaMaxGenerations, lastGAPath, currentMap, historicalFit, "Replay Mode");
     }
 
+    // --- MAIN INTEGRATION LOGIC ---
     private void runRealTimeGA(MazeMap map) {
         setControlsEnabled(false);
         statusGA.setLoading("Initializing...");
         
+        System.out.println("Starting Basic Genetic Algorithm...");
+        System.out.println("Pop: " + gaPopSize + ", Mut: " + gaMutationRate + ", Gen: " + gaMaxGenerations);
+
         genPath.clear();
         genFitness.clear();
         sliderGenerations.setValue(0);
@@ -460,63 +500,100 @@ public class MazeGUIOp extends JFrame {
         cmbGenerations.setEnabled(false);
 
         Thread gaThread = new Thread(() -> {
-            GeneticAlgorithm ga = new GeneticAlgorithm(map, gaPopSize, gaMutationRate, gaCrossoverRate, gaElitismCount);
-            ArrayList<Chromosome> population = ga.initPopulation(null);
+            int geneLength = map.rows * map.cols * 2;
             
-            double lastBestFitness = Double.MAX_VALUE;
-            int stagnationCount = 0;
-            double defaultMutationRate = gaMutationRate;
-            boolean useHeuristic = false;
+            // 1. Initialize BasicGenetic
+            BasicGenetic ga = new BasicGenetic(gaPopSize, geneLength, gaMutationRate, map);
+            
+            BasicChromosome finalBest = null;
 
-            for (int gen = 1; gen <= gaMaxGenerations; gen++) {
-                population = ga.evolve(population, useHeuristic, gaMutationMode);
-                Collections.sort(population);
-                Chromosome best = population.get(0);
+            for (int gen = 0; gen < gaMaxGenerations; gen++) {
+                
+                // 2. Evaluate
+                ga.evaluatePopulation();
+                BasicChromosome best = ga.getBest();
 
-                List<Point> rawPath = DumbDecoder.getPath(map, best, true);
-                List<Point> visualPath = new ArrayList<>(rawPath); 
+                if (finalBest == null || best.fitness > finalBest.fitness) {
+                    finalBest = best.copy();
+                }
+
+                // 3. Trace Path (Local implementation for GA)
+                List<Point> visualPath = tracePath(map, best);
                 
                 synchronized(genPath) {
                     genPath.add(visualPath);
                     genFitness.add(best.fitness);
                 }
 
-                if (Math.abs(best.fitness - lastBestFitness) < 0.0001) stagnationCount++; 
-                else {
-                    stagnationCount = 0; 
-                    lastBestFitness = best.fitness; 
-                    ga.setMutationRate(defaultMutationRate); 
+                // 4. Console Logs
+                if (best.solved) {
+                    System.out.println("Generation " + gen + " has a solution. Fitness: " + best.fitness);
                 }
-                if (stagnationCount > 50) ga.setMutationRate(0.4); 
+                if (gen % 100 == 0) {
+                    System.out.println("Gen " + gen + " best fitness = " + best.fitness);
+                }
 
-                final String statusText = (stagnationCount > 50) ? "[Boost]" : "";
+                // 5. GUI Update
                 final int currentGen = gen;
                 final double currentFit = best.fitness;
+                final boolean isSolved = best.solved;
                 
                 SwingUtilities.invokeLater(() -> {
                     lastGAPath = visualPath;
                     refreshMazeView();
-                    statusGA.updateStatsLive(currentGen, gaMaxGenerations, visualPath, map, currentFit, statusText);
-                    sliderGenerations.setMaximum(currentGen - 1);
-                    sliderGenerations.setValue(currentGen - 1);
+                    statusGA.updateStatsLive(currentGen, gaMaxGenerations, visualPath, map, currentFit, isSolved ? "SOLVED" : "Running");
+                    sliderGenerations.setMaximum(currentGen);
+                    sliderGenerations.setValue(currentGen);
                     lblGenVal.setText("Gen: " + currentGen + "  ");
                 });
+                
                 try { Thread.sleep(simulationSpeed); } catch (InterruptedException e) {} 
+
+                // 6. Evolve
+                ga.evolve();
             }
             
-            Chromosome finalBest = population.get(0);
-            List<Point> finalPath = DumbDecoder.getPath(map, finalBest, true);
+            // Finalization
+            System.out.println("Finished all generations.");
+            System.out.println("Best fitness overall = " + finalBest.fitness);
+            
+            List<Point> finalPath = tracePath(map, finalBest);
             lastGAPath = new ArrayList<>(finalPath);
             cachedGAFitness = finalBest.fitness;
 
             SwingUtilities.invokeLater(() -> {
                 refreshMazeView();
-                statusGA.updateStatsLive(gaMaxGenerations, gaMaxGenerations, finalPath, map, finalBest.fitness, "COMPLETED!");
+                statusGA.updateStatsLive(gaMaxGenerations, gaMaxGenerations, finalPath, map, cachedGAFitness, "COMPLETED!");
                 setupReplayControls();
                 setControlsEnabled(true);
             });
         });
         gaThread.start();
+    }
+    
+    // Trace path for GA Chromosomes
+    private List<Point> tracePath(MazeMap map, BasicChromosome chromo) {
+        List<Point> path = new ArrayList<>();
+        int r = map.start.r;
+        int c = map.start.c;
+        path.add(new Point(c, r)); 
+        
+        for (int move : chromo.genes) {
+            int nr = r, nc = c;
+            
+            if (move == 0) nr--;
+            else if (move == 1) nr++;
+            else if (move == 2) nc--;
+            else if (move == 3) nc++;
+            
+            if (!map.isValid(nr, nc)) continue;
+            
+            r = nr; c = nc;
+            path.add(new Point(c, r));
+            
+            if (r == map.goal.r && c == map.goal.c) break;
+        }
+        return path;
     }
 
     private void setControlsEnabled(boolean enabled) {
@@ -543,18 +620,12 @@ public class MazeGUIOp extends JFrame {
         JTextField txtPop = new JTextField(String.valueOf(gaPopSize));
         JTextField txtMut = new JTextField(String.valueOf(gaMutationRate));
         JTextField txtGen = new JTextField(String.valueOf(gaMaxGenerations));
-        JTextField txtEli = new JTextField(String.valueOf(gaElitismCount));
-        JTextField txtCro = new JTextField(String.valueOf(gaCrossoverRate));
-        JTextField txtMode = new JTextField(String.valueOf(gaMutationMode));
-
+       
         JPanel panel = new JPanel(new GridLayout(0, 1));
         panel.add(new JLabel("Population Size:")); panel.add(txtPop);
         panel.add(new JLabel("Mutation Rate:")); panel.add(txtMut);
-        panel.add(new JLabel("Crossover Rate:")); panel.add(txtCro);
         panel.add(new JLabel("Max Generations:")); panel.add(txtGen);
-        panel.add(new JLabel("Elitism Count:")); panel.add(txtEli);
-        panel.add(new JLabel("Mutation Mode (0-2):")); panel.add(txtMode);
-
+        
         int result = JOptionPane.showConfirmDialog(this, panel, "GA Configuration", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
 
         if (result == JOptionPane.OK_OPTION) {
@@ -562,9 +633,6 @@ public class MazeGUIOp extends JFrame {
                 gaPopSize = Integer.parseInt(txtPop.getText());
                 gaMutationRate = Double.parseDouble(txtMut.getText());
                 gaMaxGenerations = Integer.parseInt(txtGen.getText());
-                gaElitismCount = Integer.parseInt(txtEli.getText());
-                gaCrossoverRate = Double.parseDouble(txtCro.getText());
-                gaMutationMode = Integer.parseInt(txtMode.getText());
                 
                 lastGAPath = null; 
                 genPath.clear();
@@ -583,7 +651,6 @@ public class MazeGUIOp extends JFrame {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new MazeGUIOp());
+        SwingUtilities.invokeLater(() -> new BasicGUI());
     }
-
 }
