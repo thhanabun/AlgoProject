@@ -1,9 +1,13 @@
+package GA_StocasticDecoder;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Random;
+
+import Struct.MazeMap;
+import Struct.Point;
 
 public class DumbestDecoder {
 

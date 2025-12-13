@@ -1,5 +1,4 @@
-
-
+package Struct;
 public class MazeMap {
     public int[][] grid;
     public int rows;

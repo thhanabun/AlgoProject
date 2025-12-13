@@ -1,7 +1,11 @@
+package GA_StocasticDecoder;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+
+import Struct.MazeMap;
+import Struct.Point;
 
 public class Chromosome2 implements Comparable<Chromosome2> {
     public double[] genes; 

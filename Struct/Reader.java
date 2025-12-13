@@ -1,3 +1,5 @@
+package Struct;
+
 
 import java.io.IOException;
 import java.nio.file.Files;

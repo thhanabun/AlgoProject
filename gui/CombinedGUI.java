@@ -1,4 +1,16 @@
+package gui;
 import javax.swing.*;
+
+import GA_DIjksDecoder.Chromosome;
+import GA_DIjksDecoder.DumbDecoder;
+import GA_DIjksDecoder.GeneticAlgorithm;
+import GA_StocasticDecoder.Chromosome2;
+import GA_StocasticDecoder.GeneticAlgorithm2;
+import GA_StocasticDecoder.GlobalKnowledge;
+import Struct.MazeMap;
+import Struct.Point;
+import Struct.Reader;
+
 import java.awt.*;
 import java.io.File;
 import java.util.List;

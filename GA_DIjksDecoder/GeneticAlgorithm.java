@@ -1,7 +1,11 @@
+package GA_DIjksDecoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+
+import Struct.MazeMap;
+import Struct.Point;
 
 public class GeneticAlgorithm {
     private int popSize;         
@@ -76,7 +80,7 @@ public class GeneticAlgorithm {
                 child.fitness = DumbDecoder.calculateFitness(map, child, useHeuristic);
             }
         });
-        
+
         return newPopulation;
     }
 

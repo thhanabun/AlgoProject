@@ -1,7 +1,11 @@
+package GA_DIjksDecoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.PriorityQueue;
+
+import Struct.MazeMap;
+import Struct.Point;
 
 public class DumbDecoder {
 

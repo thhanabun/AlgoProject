@@ -1,3 +1,4 @@
+package gui;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -8,6 +9,9 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 
 import javax.swing.JPanel;
+
+import Struct.MazeMap;
+import Struct.Point;
 
 public class MazeRenderPanel extends JPanel {
         private BufferedImage baseImage;  // Stores just the walls (Static at 1:1)

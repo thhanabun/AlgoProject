@@ -1,3 +1,4 @@
+package gui;
 
 import java.awt.BorderLayout;
 import java.awt.Font;
@@ -7,6 +8,9 @@ import javax.swing.BorderFactory;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.border.TitledBorder;
+
+import Struct.MazeMap;
+import Struct.Point;
 
 public class AlgorithmStatusPanel extends JPanel {
         private JLabel dataLabel;
