@@ -44,7 +44,7 @@ public class DumbestDecoder {
         boolean[][] isVisited = new boolean[map.rows][map.cols];
         isVisited[curR][curC] = true;
 
-        int maxSteps = map.rows * map.cols * 3; 
+        int maxSteps = map.rows * map.cols * 10; 
         Random deterministicRand = new Random(chromo.hashCode());
 
         for (int step = 0; step < maxSteps; step++) {

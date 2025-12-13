@@ -5,6 +5,7 @@ public class Chromosome implements Comparable<Chromosome> {
     public double[] genes;
     public double fitness = -1;
     public int rows, cols;
+    
     private static final Random rand = new Random();
 
     public static final int MUTATION_RANDOM = 0;
@@ -68,12 +69,6 @@ public class Chromosome implements Comparable<Chromosome> {
         }
     }
     
-    public void setPriority(int r, int c, double val) {
-        if (r >= 0 && r < rows && c >= 0 && c < cols) {
-            genes[r * cols + c] = val;
-        }
-    }
-
     public Chromosome clone() {
         Chromosome c = new Chromosome(rows, cols);
         System.arraycopy(this.genes, 0, c.genes, 0, genes.length);

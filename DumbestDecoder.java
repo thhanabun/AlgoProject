@@ -64,7 +64,6 @@ public class DumbestDecoder {
                 int nr = curR + d[0];
                 int nc = curC + d[1];
 
-                // เช็ค: เดินได้ + ไม่เคยมา + ไม่ใช่ Global Dead End + ไม่ใช่ Junction Block ส่วนตัว
                 if (map.isValid(nr, nc) && !isVisited[nr][nc] 
                     && !GlobalKnowledge.isDeadEnd(nr, nc) 
                     && !chromo.isMyBlock(nr, nc)) {

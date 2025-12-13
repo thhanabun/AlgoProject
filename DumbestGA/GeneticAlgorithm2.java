@@ -60,7 +60,7 @@ public class GeneticAlgorithm2 {
             newPopulation.add(clone);
         }
 
-        int freshBloodCount = (int)(popSize * 0); 
+        int freshBloodCount = (int)(popSize * 0.1); 
         int breedCount = popSize - elitismCount - freshBloodCount;
 
         // 2. Breeding
@@ -107,7 +107,7 @@ public class GeneticAlgorithm2 {
     }
 
     private Chromosome2 tournamentSelection(ArrayList<Chromosome2> pop) {
-        int tournamentSize = 5;
+        int tournamentSize = 3;
         Chromosome2 best = null;
         for (int i = 0; i < tournamentSize; i++) {
             Chromosome2 candidate = pop.get(rand.nextInt(pop.size()));

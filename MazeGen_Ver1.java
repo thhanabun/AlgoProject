@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.Scanner;
 
-public class Mazegen {
+public class MazeGen_Ver1 {
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);

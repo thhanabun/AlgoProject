@@ -1,4 +1,3 @@
-
 public class GlobalKnowledge {
     public static boolean[] deadEnds; 
     public static int rows, cols;

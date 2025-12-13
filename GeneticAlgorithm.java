@@ -22,22 +22,15 @@ public class GeneticAlgorithm {
 
     public ArrayList<Chromosome> initPopulation(List<Point> seedPath) {
         ArrayList<Chromosome> population = new ArrayList<>();
-    
         int seedCount = (seedPath != null && !seedPath.isEmpty()) ? 2 : 0; 
-
         for (int i = 0; i < seedCount; i++) {
             Chromosome seed = new Chromosome(map.rows, map.cols);
-            
             for (int r = 0; r < map.rows; r++) {
                 for (int c = 0; c < map.cols; c++) {
                     seed.setGene(r, c, rand.nextDouble() * 0.2); 
                 }
             }
-            
-            for (Point p : seedPath) {
-                seed.setGene(p.r, p.c, 0.8 + (rand.nextDouble() * 0.2)); 
-            }
-            
+            for (Point p : seedPath) seed.setGene(p.r, p.c, 0.8 + (rand.nextDouble() * 0.2)); 
             seed.fitness = DumbDecoder.calculateFitness(map, seed, false);
             population.add(seed);
             System.out.println(">> Injected Seed Chromosome! Fitness: " + seed.fitness);
@@ -53,43 +46,10 @@ public class GeneticAlgorithm {
         return population;
     }
 
-    // public ArrayList<Chromosome> evolve(ArrayList<Chromosome> population) {
-    //     ArrayList<Chromosome> newPopulation = new ArrayList<>();
-
-    //     Collections.sort(population);
-
-    //     for (int i = 0; i < elitismCount; i++) {
-    //         newPopulation.add(population.get(i).clone());
-    //     }
-
-    //     while (newPopulation.size() < popSize) {
-
-    //         Chromosome parent1 = tournamentSelection(population);
-    //         Chromosome parent2 = tournamentSelection(population);
-
-
-    //         Chromosome child;
-    //         if (rand.nextDouble() < crossoverRate) {
-    //             child = uniformCrossover(parent1, parent2);
-    //         } else {
-    //             child = parent1.clone(); 
-    //         }
-
-    //         child.mutate(mutationRate);
-
-    //         if (child.fitness == -1) {
-    //             child.fitness = DumbDecoder.calculateFitness(map, child);
-    //         }
-        
-    //         newPopulation.add(child);
-    //     }
-
-    //     return newPopulation;
-    // }
-
     public ArrayList<Chromosome> evolve(ArrayList<Chromosome> population, boolean useHeuristic, int mutationMode) {
         ArrayList<Chromosome> newPopulation = new ArrayList<>();
         Collections.sort(population);
+
         for (int i = 0; i < elitismCount; i++) {
             newPopulation.add(population.get(i).clone());
         }
@@ -107,10 +67,7 @@ public class GeneticAlgorithm {
 
             child.mutate(mutationRate, mutationMode);
 
-            if (child.fitness != -1) {
-                child.fitness = -1; 
-            }
-
+            if (child.fitness != -1) child.fitness = -1; 
             newPopulation.add(child);
         }
 
@@ -119,6 +76,7 @@ public class GeneticAlgorithm {
                 child.fitness = DumbDecoder.calculateFitness(map, child, useHeuristic);
             }
         });
+        
         return newPopulation;
     }
 

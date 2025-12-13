@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.Scanner;
 
-public class MazeGen2 {
+public class MazeGen_Ver2 {
     static File dir = new File("MAZE");
     
     private static int ROWS;

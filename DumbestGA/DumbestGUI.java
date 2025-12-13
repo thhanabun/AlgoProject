@@ -377,7 +377,7 @@ public class DumbestGUI extends JFrame {
                     ga.setMutationRate(defaultMutationRate); 
                 }
                 
-                if (stagnationCount > 50) ga.setMutationRate(0.4); 
+                if (stagnationCount > 50) ga.setMutationRate(0.12); 
 
                 // if (stagnationCount > 50) { 
                 //     Chromosome2 survivor = population.get(0);
