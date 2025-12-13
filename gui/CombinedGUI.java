@@ -10,6 +10,8 @@ import GA_StocasticDecoder.StocasticDecoder;
 import GA_StocasticDecoder.StocasticGA;
 import GA_StocasticDecoder.GlobalKnowledge;
 
+import MazeSolverAlgo.Astar;
+
 import Struct.MazeMap;
 import Struct.Point;
 import Struct.Reader;
@@ -395,9 +397,9 @@ public class CombinedGUI extends JFrame {
     }
 
     private void setupButtonActions(MazeMap map) {
-        btnGreedy.addActionListener(e -> runBackgroundAlgo("Greedy", () -> DijksDecoder.getGreedyPath(map), statusGreedy, path -> lastGreedyPath = path));
-        btnAStar.addActionListener(e -> runBackgroundAlgo("A*", () -> DijksDecoder.getPureAStarPath(map), statusAStar, path -> lastAStarPath = path));
-        btnDijk.addActionListener(e -> runBackgroundAlgo("Dijkstra", () -> DijksDecoder.getDijkstraPath(map), statusDijk, path -> lastDijkPath = path));
+        btnGreedy.addActionListener(e -> runBackgroundAlgo("Greedy", () -> Astar.getGreedyPath(map), statusGreedy, path -> lastGreedyPath = path));
+        btnAStar.addActionListener(e -> runBackgroundAlgo("A*", () -> Astar.getPureAStarPath(map), statusAStar, path -> lastAStarPath = path));
+        btnDijk.addActionListener(e -> runBackgroundAlgo("Dijkstra", () -> Astar.getDijkstraPath(map), statusDijk, path -> lastDijkPath = path));
 
         btnRunGADijk.addActionListener(e -> {
             if (lastGADijkPath != null && lastRunMode == LastRun.GA_DIJK) {

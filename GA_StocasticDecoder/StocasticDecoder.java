@@ -1,9 +1,7 @@
 package GA_StocasticDecoder;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.PriorityQueue;
 import java.util.Random;
 
 import Struct.MazeMap;
@@ -12,28 +10,6 @@ import Struct.Point;
 public class StocasticDecoder {
 
     public static double ALPHA = 2; 
-    private static class Node implements Comparable<Node> {
-        int r, c;
-        double gVirtual;
-        double realCost; 
-        double h;        
-        Node parent;
-
-        public Node(int r, int c, double gVirtual, double realCost, double h, Node parent) {
-            this.r = r; this.c = c;
-            this.gVirtual = gVirtual;
-            this.realCost = realCost;
-            this.h = h;
-            this.parent = parent;
-        }
-
-        public double getF() { return gVirtual + h; }
-
-        @Override
-        public int compareTo(Node other) {
-            return Double.compare(this.getF(), other.getF());
-        }
-    }
     
     public static double calculateFitness(MazeMap map, StocasticChromosome chromo, List<Point> path) {
         path.clear();
@@ -106,19 +82,16 @@ public class StocasticDecoder {
                     Point prev = path.get(path.size() - 1);
                     curR = prev.r;
                     curC = prev.c;
-                    
-                    // --- GLOBAL LEARNING ---
+
                     int openExits = 0;
                     for (int[] d : dirs) {
                         int nr = badR + d[0];
                         int nc = badC + d[1];
-                        // นับทางออกที่ไม่ใช่กำแพง และไม่ใช่ Global Dead End
                         if (map.isValid(nr, nc) && !GlobalKnowledge.isDeadEnd(nr, nc) && !(badR == map.start.r && badC == map.start.c)) { //fix start
                             openExits++;
                         }
                     }
 
-                    // ถ้ามีทางออก <= 1 (คือทางที่ถอยมา) = ตันจริง -> บอกโลกรู้เลย!
                     if (openExits <= 1) {
                         GlobalKnowledge.markDeadEnd(badR, badC);
                     }
@@ -128,38 +101,20 @@ public class StocasticDecoder {
                 }
             }
         }
-        // -----------------------------------------------------------
-        // 💀 โซนคิดคะแนนคนตาย (Fail Case)
-        // -----------------------------------------------------------
-        
-        // 1. ใช้ Manhattan Distance (เหมาะกับ Grid มากกว่า Euclidean/Sqrt)
-        //    เพราะในเขาวงกต เราเดินทะลุกำแพงไม่ได้ ต้องเดินเป็นมุมฉาก
+
         double distR = Math.abs(curR - goal.r);
         double distC = Math.abs(curC - goal.c);
         double manhattanDist = distR + distC;
 
-        // 2. Base Penalty: ลดลงมาให้สมเหตุสมผล
-        //    สมมติ Map 20x20 Weight สูงสุด 100 -> Cost สูงสุดที่เป็นไปได้คือ ~40,000
-        //    ดังนั้นตั้งค่าปรับไว้ที่ 50,000 - 100,000 ก็พอ (เพื่อให้มากกว่า Cost ของคนที่ทำสำเร็จ)
-        //    *อย่าใช้ 5 ล้าน เพราะมันทำให้ความต่างของระยะทางดูจืดจาง*
         double basePenalty = 100000.0;
-
-        // 3. Distance Factor: ยิ่งไกล ยิ่งโดนหนัก (ใช้ยกกำลังช่วย)
-        //    การใช้กำลัง 2 (Squaring) จะทำให้ความต่างชัดเจนขึ้น
-        //    เช่น ห่าง 10 ช่อง = ปรับ 100 / ห่าง 20 ช่อง = ปรับ 400
-        //    GA จะแยกแยะ "ตัวที่เกือบถึง" กับ "ตัวที่หลงทาง" ได้เก่งขึ้น
         double distancePenalty = Math.pow(manhattanDist, 2) * 10.0; 
 
-        // 4. (Optional) Penalize Backtracking to Start
-        //    ถ้า stack ว่าง (ถอยกลับมาจุดเริ่ม) แปลว่าหาทางไม่ได้เลย ให้ปรับหนักสุด
         if (path.isEmpty()) {
             return basePenalty * 2; 
         }
 
         return basePenalty + distancePenalty;
 
-        // double distToGoal = Math.sqrt(Math.pow(curR - goal.r, 2) + Math.pow(curC - goal.c, 2));
-        // return 5000000.0 + (distToGoal * 1000.0); 
     }
 
 
@@ -169,127 +124,4 @@ public class StocasticDecoder {
         return p;
     }
 
-    public static List<Point> getGreedyPath(MazeMap map) {
-        int rows = map.rows; int cols = map.cols;
-        boolean[][] visited = new boolean[rows][cols];
-        PriorityQueue<Node> pq = new PriorityQueue<>();
-        Point start = map.start; Point goal = map.goal;
-
-        pq.add(new Node(start.r, start.c, 0, 0, manhattan(start, goal), null));
-        visited[start.r][start.c] = true;
-
-        while (!pq.isEmpty()) {
-            Node current = pq.poll();
-            if (current.r == goal.r && current.c == goal.c) return backtrack(current);
-
-            int[][] dirs = {{-1,0}, {1,0}, {0,-1}, {0,1}};
-            for (int[] dir : dirs) {
-                int nr = current.r + dir[0];
-                int nc = current.c + dir[1];
-                if (!map.isValid(nr, nc) || visited[nr][nc]) continue;
-
-                int weight = map.getWeight(nr, nc);
-                visited[nr][nc] = true;
-                pq.add(new Node(nr, nc, 0, current.realCost + weight, manhattan(new Point(nr, nc), goal), current));
-            }
-        }
-        return new ArrayList<>();
-    }
-
-    public static double runPureAStar(MazeMap map) {
-        int rows = map.rows; int cols = map.cols;
-        double[][] bestDist = new double[rows][cols];
-        for(int i=0; i<rows; i++) for(int j=0; j<cols; j++) bestDist[i][j] = Double.MAX_VALUE;
-
-        PriorityQueue<Node> pq = new PriorityQueue<>();
-        Point start = map.start; Point goal = map.goal;
-
-        pq.add(new Node(start.r, start.c, 0, 0, manhattan(start, goal), null));
-        bestDist[start.r][start.c] = 0;
-
-        while (!pq.isEmpty()) {
-            Node current = pq.poll();
-            if (current.r == goal.r && current.c == goal.c) return current.realCost;
-            if (current.realCost > bestDist[current.r][current.c]) continue;
-
-            int[][] dirs = {{-1,0}, {1,0}, {0,-1}, {0,1}};
-            for (int[] dir : dirs) {
-                int nr = current.r + dir[0];
-                int nc = current.c + dir[1];
-                if (!map.isValid(nr, nc)) continue;
-                
-                double newCost = current.realCost + map.getWeight(nr, nc);
-                if (newCost < bestDist[nr][nc]) {
-                    bestDist[nr][nc] = newCost;
-                    pq.add(new Node(nr, nc, newCost, newCost, manhattan(new Point(nr, nc), goal), null));
-                }
-            }
-        }
-        return -1;
-    }
-    
-    public static List<Point> getPureAStarPath(MazeMap map) {
-        int rows = map.rows; int cols = map.cols;
-        double[][] bestDist = new double[rows][cols];
-        for(int i=0; i<rows; i++) for(int j=0; j<cols; j++) bestDist[i][j] = Double.MAX_VALUE;
-
-        PriorityQueue<Node> pq = new PriorityQueue<>();
-        Point start = map.start; Point goal = map.goal;
-
-        pq.add(new Node(start.r, start.c, 0, 0, manhattan(start, goal), null));
-        bestDist[start.r][start.c] = 0;
-
-        while (!pq.isEmpty()) {
-            Node current = pq.poll();
-            if (current.r == goal.r && current.c == goal.c) return backtrack(current);
-            if (current.realCost > bestDist[current.r][current.c]) continue;
-
-            int[][] dirs = {{-1,0}, {1,0}, {0,-1}, {0,1}};
-            for (int[] dir : dirs) {
-                int nr = current.r + dir[0];
-                int nc = current.c + dir[1];
-
-                if (!map.isValid(nr, nc)) continue;
-                double newCost = current.realCost + map.getWeight(nr, nc);
-                if (newCost < bestDist[nr][nc]) {
-                    bestDist[nr][nc] = newCost;
-                    pq.add(new Node(nr, nc, newCost, newCost, manhattan(new Point(nr, nc), goal), current));
-                }
-            }
-        }
-        return new ArrayList<>();
-    }
-
-    private static List<Point> backtrack(Node endNode) {
-        List<Point> path = new ArrayList<>();
-        Node curr = endNode;
-        while (curr != null) { path.add(new Point(curr.r, curr.c)); curr = curr.parent; }
-        Collections.reverse(path);
-        return path;
-    }
-
-    private static double manhattan(Point a, Point b) {
-        return Math.abs(a.r - b.r) + Math.abs(a.c - b.c);
-    }
-
-    public static void smoothPath(List<Point> path) {
-        if (path.size() < 3) return;
-
-        boolean changed = true;
-        while (changed) {
-            changed = false;
-            for (int i = 0; i < path.size() - 2; i++) {
-                Point p1 = path.get(i);
-                Point p3 = path.get(i + 2);
-
-                // เช็คว่า p1 กับ p3 อยู่ติดกันไหม (บน-ล่าง-ซ้าย-ขวา)
-                // ถ้าติดกัน แสดงว่า p2 (ตัวกลาง) คือส่วนเกินที่เดินอ้อม -> ลบทิ้ง
-                if (Math.abs(p1.r - p3.r) + Math.abs(p1.c - p3.c) == 1) {
-                    path.remove(i + 1);
-                    changed = true;
-                    i--; // ถอย index กลับมาเช็คใหม่
-                }
-            }
-        }
-    }
 }
