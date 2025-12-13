@@ -2,10 +2,12 @@ package GA_DIjksDecoder;
 
 import java.util.Random;
 
-public class Chromosome implements Comparable<Chromosome> {
+public class DijksChromosome implements Comparable<DijksChromosome> {
     public double[] genes;
     public double fitness = -1;
     public int rows, cols;
+    public boolean[] junctionBlocks;
+    public Object path;
     
     private static final Random rand = new Random();
 
@@ -13,7 +15,7 @@ public class Chromosome implements Comparable<Chromosome> {
     public static final int MUTATION_FLIP   = 1;
     public static final int MUTATION_HYBRID = 2;
     
-    public Chromosome(int rows, int cols) {
+    public DijksChromosome(int rows, int cols) {
         this.rows = rows;
         this.cols = cols;
         this.genes = new double[rows * cols];
@@ -70,15 +72,15 @@ public class Chromosome implements Comparable<Chromosome> {
         }
     }
     
-    public Chromosome clone() {
-        Chromosome c = new Chromosome(rows, cols);
+    public DijksChromosome clone() {
+        DijksChromosome c = new DijksChromosome(rows, cols);
         System.arraycopy(this.genes, 0, c.genes, 0, genes.length);
         c.fitness = this.fitness;
         return c;
     }
 
     @Override
-    public int compareTo(Chromosome other) {
+    public int compareTo(DijksChromosome other) {
         return Double.compare(this.fitness, other.fitness);
     }
 }

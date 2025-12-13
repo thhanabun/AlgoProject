@@ -7,7 +7,7 @@ import java.util.Random;
 import Struct.MazeMap;
 import Struct.Point;
 
-public class Chromosome2 implements Comparable<Chromosome2> {
+public class StocasticChromosome implements Comparable<StocasticChromosome> {
     public double[] genes; 
     public double fitness = -1;
     public int rows, cols;
@@ -21,7 +21,7 @@ public class Chromosome2 implements Comparable<Chromosome2> {
     public static final int MUTATION_FLIP   = 1;
     public static final int MUTATION_HYBRID = 2;
     
-    public Chromosome2(int rows, int cols) {
+    public StocasticChromosome(int rows, int cols) {
         this.rows = rows;
         this.cols = cols;
         this.genes = new double[rows * cols];
@@ -95,7 +95,7 @@ public class Chromosome2 implements Comparable<Chromosome2> {
         return ways > 2; 
     }
 
-    public void inheritWalls(Chromosome2 p1, Chromosome2 p2) {
+    public void inheritWalls(StocasticChromosome p1, StocasticChromosome p2) {
         for(int i=0; i<junctionBlocks.length; i++) {
             boolean w1 = p1.junctionBlocks[i];
             boolean w2 = p2.junctionBlocks[i];
@@ -105,8 +105,8 @@ public class Chromosome2 implements Comparable<Chromosome2> {
         }
     }
 
-    public Chromosome2 clone() {
-        Chromosome2 c = new Chromosome2(rows, cols);
+    public StocasticChromosome clone() {
+        StocasticChromosome c = new StocasticChromosome(rows, cols);
         System.arraycopy(this.genes, 0, c.genes, 0, genes.length);
         System.arraycopy(this.junctionBlocks, 0, c.junctionBlocks, 0, junctionBlocks.length);
         c.fitness = this.fitness;
@@ -115,7 +115,7 @@ public class Chromosome2 implements Comparable<Chromosome2> {
     }
 
     @Override
-    public int compareTo(Chromosome2 other) {
+    public int compareTo(StocasticChromosome other) {
         return Double.compare(this.fitness, other.fitness);
     }
 }

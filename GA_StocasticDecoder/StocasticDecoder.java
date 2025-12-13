@@ -9,7 +9,7 @@ import java.util.Random;
 import Struct.MazeMap;
 import Struct.Point;
 
-public class DumbestDecoder {
+public class StocasticDecoder {
 
     public static double ALPHA = 2; 
     private static class Node implements Comparable<Node> {
@@ -35,7 +35,7 @@ public class DumbestDecoder {
         }
     }
     
-    public static double calculateFitness(MazeMap map, Chromosome2 chromo, List<Point> path) {
+    public static double calculateFitness(MazeMap map, StocasticChromosome chromo, List<Point> path) {
         path.clear();
         Point start = map.start;
         Point goal = map.goal;
@@ -163,7 +163,7 @@ public class DumbestDecoder {
     }
 
 
-    public static List<Point> getPath(MazeMap map, Chromosome2 c, boolean b) {
+    public static List<Point> getPath(MazeMap map, StocasticChromosome c, boolean b) {
         List<Point> p = new ArrayList<>();
         calculateFitness(map, c, p);
         return p;

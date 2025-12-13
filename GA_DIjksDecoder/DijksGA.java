@@ -7,7 +7,7 @@ import java.util.Random;
 import Struct.MazeMap;
 import Struct.Point;
 
-public class GeneticAlgorithm {
+public class DijksGA {
     private int popSize;         
     private double mutationRate; 
     private double crossoverRate;
@@ -16,7 +16,7 @@ public class GeneticAlgorithm {
     private MazeMap map;
     private Random rand = new Random();
 
-    public GeneticAlgorithm(MazeMap map, int popSize, double mutationRate, double crossoverRate, int elitismCount) {
+    public DijksGA(MazeMap map, int popSize, double mutationRate, double crossoverRate, int elitismCount) {
         this.map = map;
         this.popSize = popSize;
         this.mutationRate = mutationRate;
@@ -24,34 +24,34 @@ public class GeneticAlgorithm {
         this.elitismCount = elitismCount;
     }
 
-    public ArrayList<Chromosome> initPopulation(List<Point> seedPath) {
-        ArrayList<Chromosome> population = new ArrayList<>();
+    public ArrayList<DijksChromosome> initPopulation(List<Point> seedPath) {
+        ArrayList<DijksChromosome> population = new ArrayList<>();
         int seedCount = (seedPath != null && !seedPath.isEmpty()) ? 2 : 0; 
         for (int i = 0; i < seedCount; i++) {
-            Chromosome seed = new Chromosome(map.rows, map.cols);
+            DijksChromosome seed = new DijksChromosome(map.rows, map.cols);
             for (int r = 0; r < map.rows; r++) {
                 for (int c = 0; c < map.cols; c++) {
                     seed.setGene(r, c, rand.nextDouble() * 0.2); 
                 }
             }
             for (Point p : seedPath) seed.setGene(p.r, p.c, 0.8 + (rand.nextDouble() * 0.2)); 
-            seed.fitness = DumbDecoder.calculateFitness(map, seed, false);
+            seed.fitness = DijksDecoder.calculateFitness(map, seed, false);
             population.add(seed);
             System.out.println(">> Injected Seed Chromosome! Fitness: " + seed.fitness);
         }
 
         for (int i = seedCount; i < popSize; i++) {
-            Chromosome c = new Chromosome(map.rows, map.cols);
+            DijksChromosome c = new DijksChromosome(map.rows, map.cols);
             c.randomInit(); 
-            c.fitness = DumbDecoder.calculateFitness(map, c, false);
+            c.fitness = DijksDecoder.calculateFitness(map, c, false);
             population.add(c);
         }
         
         return population;
     }
 
-    public ArrayList<Chromosome> evolve(ArrayList<Chromosome> population, boolean useHeuristic, int mutationMode) {
-        ArrayList<Chromosome> newPopulation = new ArrayList<>();
+    public ArrayList<DijksChromosome> evolve(ArrayList<DijksChromosome> population, boolean useHeuristic, int mutationMode) {
+        ArrayList<DijksChromosome> newPopulation = new ArrayList<>();
         Collections.sort(population);
 
         for (int i = 0; i < elitismCount; i++) {
@@ -59,10 +59,10 @@ public class GeneticAlgorithm {
         }
 
         while (newPopulation.size() < popSize) {
-            Chromosome parent1 = tournamentSelection(population);
-            Chromosome parent2 = tournamentSelection(population);
+            DijksChromosome parent1 = tournamentSelection(population);
+            DijksChromosome parent2 = tournamentSelection(population);
 
-            Chromosome child;
+            DijksChromosome child;
             if (rand.nextDouble() < crossoverRate) {
                 child = uniformCrossover(parent1, parent2);
             } else {
@@ -77,7 +77,7 @@ public class GeneticAlgorithm {
 
         newPopulation.parallelStream().forEach(child -> {
             if (child.fitness == -1) {
-                child.fitness = DumbDecoder.calculateFitness(map, child, useHeuristic);
+                child.fitness = DijksDecoder.calculateFitness(map, child, useHeuristic);
             }
         });
 
@@ -88,13 +88,13 @@ public class GeneticAlgorithm {
         this.mutationRate = newRate;
     }
 
-    private Chromosome tournamentSelection(ArrayList<Chromosome> pop) {
+    private DijksChromosome tournamentSelection(ArrayList<DijksChromosome> pop) {
         int tournamentSize = 5;
-        Chromosome best = null;
+        DijksChromosome best = null;
 
         for (int i = 0; i < tournamentSize; i++) {
             int randomIndex = rand.nextInt(pop.size());
-            Chromosome candidate = pop.get(randomIndex);
+            DijksChromosome candidate = pop.get(randomIndex);
 
             if (best == null || candidate.fitness < best.fitness) {
                 best = candidate;
@@ -103,8 +103,8 @@ public class GeneticAlgorithm {
         return best;
     }
 
-    private Chromosome uniformCrossover(Chromosome p1, Chromosome p2) {
-        Chromosome child = new Chromosome(map.rows, map.cols);
+    private DijksChromosome uniformCrossover(DijksChromosome p1, DijksChromosome p2) {
+        DijksChromosome child = new DijksChromosome(map.rows, map.cols);
         
         for (int i = 0; i < child.genes.length; i++) {
             if (rand.nextBoolean()) {

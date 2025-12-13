@@ -8,7 +8,7 @@ import java.util.Random;
 import Struct.MazeMap;
 import Struct.Point;
 
-public class GeneticAlgorithm2 {
+public class StocasticGA {
     private int popSize;        
     private double mutationRate; 
     private double crossoverRate;
@@ -17,7 +17,7 @@ public class GeneticAlgorithm2 {
     private MazeMap map;
     private Random rand = new Random();
 
-    public GeneticAlgorithm2(MazeMap map, int popSize, double mutationRate, double crossoverRate, int elitismCount) {
+    public StocasticGA(MazeMap map, int popSize, double mutationRate, double crossoverRate, int elitismCount) {
         this.map = map;
         this.popSize = popSize;
         this.mutationRate = mutationRate;
@@ -26,25 +26,25 @@ public class GeneticAlgorithm2 {
         GlobalKnowledge.init(map.rows, map.cols);
     }
 
-    public ArrayList<Chromosome2> initPopulation(List<Point> seedPath) {
-        ArrayList<Chromosome2> population = new ArrayList<>();
+    public ArrayList<StocasticChromosome> initPopulation(List<Point> seedPath) {
+        ArrayList<StocasticChromosome> population = new ArrayList<>();
         for (int i = 0; i < popSize; i++) {
-            Chromosome2 c = new Chromosome2(map.rows, map.cols);
+            StocasticChromosome c = new StocasticChromosome(map.rows, map.cols);
             c.randomInit(); 
             c.path = new ArrayList<>(); 
-            c.fitness = DumbestDecoder.calculateFitness(map, c, c.path);
+            c.fitness = StocasticDecoder.calculateFitness(map, c, c.path);
             population.add(c);
         }
         return population;
     }
 
-    public ArrayList<Chromosome2> evolve(ArrayList<Chromosome2> population, boolean useHeuristic, int mutationMode) {
-        ArrayList<Chromosome2> newPopulation = new ArrayList<>();
+    public ArrayList<StocasticChromosome> evolve(ArrayList<StocasticChromosome> population, boolean useHeuristic, int mutationMode) {
+        ArrayList<StocasticChromosome> newPopulation = new ArrayList<>();
         Collections.sort(population);
         
         for (int i = 0; i < elitismCount; i++) {
-            Chromosome2 original = population.get(i);
-            Chromosome2 clone = original.clone();
+            StocasticChromosome original = population.get(i);
+            StocasticChromosome clone = original.clone();
         
             if (clone.path == null || clone.path.isEmpty()) {
                 if (original.path != null) {
@@ -59,10 +59,10 @@ public class GeneticAlgorithm2 {
         int breedCount = popSize - elitismCount - freshBloodCount;
 
         while (newPopulation.size() < elitismCount + breedCount) {
-            Chromosome2 parent1 = tournamentSelection(population);
-            Chromosome2 parent2 = tournamentSelection(population);
+            StocasticChromosome parent1 = tournamentSelection(population);
+            StocasticChromosome parent2 = tournamentSelection(population);
 
-            Chromosome2 child;
+            StocasticChromosome child;
             if (rand.nextDouble() < crossoverRate) {
                 child = uniformCrossover(parent1, parent2);
             } else {
@@ -76,7 +76,7 @@ public class GeneticAlgorithm2 {
         }
 
         for (int i = 0; i < freshBloodCount; i++) {
-            Chromosome2 immigrant = new Chromosome2(map.rows, map.cols);
+            StocasticChromosome immigrant = new StocasticChromosome(map.rows, map.cols);
             immigrant.randomInit();
             immigrant.fitness = -1;
             newPopulation.add(immigrant);
@@ -85,7 +85,7 @@ public class GeneticAlgorithm2 {
         newPopulation.parallelStream().forEach(child -> {
             if (child.fitness == -1) {
                 List<Point> tempPath = new ArrayList<>();
-                child.fitness = DumbestDecoder.calculateFitness(map, child, tempPath);
+                child.fitness = StocasticDecoder.calculateFitness(map, child, tempPath);
                 child.path = tempPath;
             }
         });
@@ -97,13 +97,13 @@ public class GeneticAlgorithm2 {
         this.mutationRate = newRate;
     }
 
-    private Chromosome2 tournamentSelection(ArrayList<Chromosome2> pop) {
+    private StocasticChromosome tournamentSelection(ArrayList<StocasticChromosome> pop) {
         int tournamentSize = 5;
-        Chromosome2 best = null;
+        StocasticChromosome best = null;
 
         for (int i = 0; i < tournamentSize; i++) {
             int randomIndex = rand.nextInt(pop.size());
-            Chromosome2 candidate = pop.get(randomIndex);
+            StocasticChromosome candidate = pop.get(randomIndex);
 
             if (best == null || candidate.fitness < best.fitness) {
                 best = candidate;
@@ -112,8 +112,8 @@ public class GeneticAlgorithm2 {
         return best;
     }
 
-    private Chromosome2 uniformCrossover(Chromosome2 p1, Chromosome2 p2) {
-        Chromosome2 child = new Chromosome2(map.rows, map.cols);
+    private StocasticChromosome uniformCrossover(StocasticChromosome p1, StocasticChromosome p2) {
+        StocasticChromosome child = new StocasticChromosome(map.rows, map.cols);
         
         for (int i = 0; i < child.genes.length; i++) {
             if (rand.nextBoolean()) {

@@ -7,7 +7,7 @@ import java.util.PriorityQueue;
 import Struct.MazeMap;
 import Struct.Point;
 
-public class DumbDecoder {
+public class DijksDecoder {
 
     public static double ALPHA = 4; 
     private static class Node implements Comparable<Node> {
@@ -33,7 +33,7 @@ public class DumbDecoder {
         }
     }
 
-    public static double calculateFitness(MazeMap map, Chromosome chromo, boolean useHeuristic) {
+    public static double calculateFitness(MazeMap map, DijksChromosome chromo, boolean useHeuristic) {
         int rows = map.rows; int cols = map.cols;
         double[][] bestVirtual = new double[rows][cols];
         for(int i=0; i<rows; i++) for(int j=0; j<cols; j++) bestVirtual[i][j] = Double.MAX_VALUE;
@@ -84,7 +84,7 @@ public class DumbDecoder {
         return 10000 + (nodesExplored * 0.1);
     }
 
-    public static List<Point> getPath(MazeMap map, Chromosome chromo, boolean useHeuristic) {
+    public static List<Point> getPath(MazeMap map, DijksChromosome chromo, boolean useHeuristic) {
         int rows = map.rows; int cols = map.cols;
         double[][] bestVirtual = new double[rows][cols];
         for(int i=0; i<rows; i++) for(int j=0; j<cols; j++) bestVirtual[i][j] = Double.MAX_VALUE;

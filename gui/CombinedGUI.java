@@ -1,12 +1,15 @@
 package gui;
 import javax.swing.*;
 
-import GA_DIjksDecoder.Chromosome;
-import GA_DIjksDecoder.DumbDecoder;
-import GA_DIjksDecoder.GeneticAlgorithm;
-import GA_StocasticDecoder.Chromosome2;
-import GA_StocasticDecoder.GeneticAlgorithm2;
+import GA_DIjksDecoder.DijksChromosome;
+import GA_DIjksDecoder.DijksDecoder;
+import GA_DIjksDecoder.DijksGA;
+
+import GA_StocasticDecoder.StocasticChromosome;
+import GA_StocasticDecoder.StocasticDecoder;
+import GA_StocasticDecoder.StocasticGA;
 import GA_StocasticDecoder.GlobalKnowledge;
+
 import Struct.MazeMap;
 import Struct.Point;
 import Struct.Reader;
@@ -392,9 +395,9 @@ public class CombinedGUI extends JFrame {
     }
 
     private void setupButtonActions(MazeMap map) {
-        btnGreedy.addActionListener(e -> runBackgroundAlgo("Greedy", () -> DumbDecoder.getGreedyPath(map), statusGreedy, path -> lastGreedyPath = path));
-        btnAStar.addActionListener(e -> runBackgroundAlgo("A*", () -> DumbDecoder.getPureAStarPath(map), statusAStar, path -> lastAStarPath = path));
-        btnDijk.addActionListener(e -> runBackgroundAlgo("Dijkstra", () -> DumbDecoder.getDijkstraPath(map), statusDijk, path -> lastDijkPath = path));
+        btnGreedy.addActionListener(e -> runBackgroundAlgo("Greedy", () -> DijksDecoder.getGreedyPath(map), statusGreedy, path -> lastGreedyPath = path));
+        btnAStar.addActionListener(e -> runBackgroundAlgo("A*", () -> DijksDecoder.getPureAStarPath(map), statusAStar, path -> lastAStarPath = path));
+        btnDijk.addActionListener(e -> runBackgroundAlgo("Dijkstra", () -> DijksDecoder.getDijkstraPath(map), statusDijk, path -> lastDijkPath = path));
 
         btnRunGADijk.addActionListener(e -> {
             if (lastGADijkPath != null && lastRunMode == LastRun.GA_DIJK) {
@@ -522,8 +525,8 @@ public class CombinedGUI extends JFrame {
         sliderGenerations.setValue(0);
         
         Thread gaThread = new Thread(() -> {
-            GeneticAlgorithm ga = new GeneticAlgorithm(map, gaPopSize, gaMutationRate, gaCrossoverRate, gaElitismCount);
-            ArrayList<Chromosome> population = ga.initPopulation(null);
+            DijksGA ga = new DijksGA(map, gaPopSize, gaMutationRate, gaCrossoverRate, gaElitismCount);
+            ArrayList<DijksChromosome> population = ga.initPopulation(null);
             
             double lastBestFitness = Double.MAX_VALUE;
             int stagnationCount = 0;
@@ -532,9 +535,9 @@ public class CombinedGUI extends JFrame {
             for (int gen = 1; gen <= gaMaxGenerations; gen++) {
                 population = ga.evolve(population, false, 0); // 0 = standard logic
                 Collections.sort(population);
-                Chromosome best = population.get(0);
+                DijksChromosome best = population.get(0);
 
-                List<Point> path = DumbDecoder.getPath(map, best, true);
+                List<Point> path = DijksDecoder.getPath(map, best, true);
                 List<Point> visualPath = new ArrayList<>(path);
                 
                 synchronized(historyGADijkPath) {
@@ -581,17 +584,17 @@ public class CombinedGUI extends JFrame {
         sliderGenerations.setValue(0);
 
         Thread gaThread = new Thread(() -> {
-            GeneticAlgorithm2 ga = new GeneticAlgorithm2(map, gaPopSize, gaMutationRate, gaCrossoverRate, gaElitismCount);
-            ArrayList<Chromosome2> population = ga.initPopulation(null);
+            StocasticGA ga = new StocasticGA(map, gaPopSize, gaMutationRate, gaCrossoverRate, gaElitismCount);
+            ArrayList<StocasticChromosome> population = ga.initPopulation(null);
             
             double lastBestFitness = Double.MAX_VALUE;
             int stagnationCount = 0;
             double defaultMut = gaMutationRate;
 
             for (int gen = 1; gen <= gaMaxGenerations; gen++) {
-                population = ga.evolve(population, false, Chromosome2.MUTATION_HYBRID);
+                population = ga.evolve(population, false, DijksChromosome.MUTATION_HYBRID);
                 Collections.sort(population);
-                Chromosome2 best = population.get(0);
+                StocasticChromosome best = population.get(0);
 
                 List<Point> visualPath = new ArrayList<>(best.path);
                 // Convert boolean[] blocks to List<Point> for the Renderer
