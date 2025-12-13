@@ -73,10 +73,10 @@ public class CombinedGUI extends JFrame {
     private LastRun lastRunMode = LastRun.NONE;
 
     // --- GA Parameters (Shared) ---
-    private int gaPopSize = 100;         
-    private double gaMutationRate = 0.1; 
+    private int gaPopSize = 500;         
+    private double gaMutationRate = 0.01; 
     private double gaCrossoverRate = 0.9;
-    private int gaElitismCount = 5;
+    private int gaElitismCount = 10;
     private int gaMaxGenerations = 1000;
     //private int gaMutationMode = 0; // 0 for Dijk, Hybrid for SCT
     private int simulationSpeed = 20; 
@@ -610,7 +610,7 @@ public class CombinedGUI extends JFrame {
 
                 if (Math.abs(best.fitness - lastBestFitness) < 0.0001) stagnationCount++;
                 else { stagnationCount = 0; lastBestFitness = best.fitness; ga.setMutationRate(defaultMut); }
-                if (stagnationCount > 50) ga.setMutationRate(0.4);
+                //if (stagnationCount > 50) ga.setMutationRate(0.01);
 
                 final int cGen = gen;
                 final double cFit = best.fitness;

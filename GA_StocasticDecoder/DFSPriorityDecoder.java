@@ -69,26 +69,21 @@ public class DFSPriorityDecoder {
                 int badR = curR;
                 int badC = curC;
                 
-                // 1. Move back one step
                 path.remove(path.size() - 1); 
                 Point prev = path.get(path.size() - 1);
                 curR = prev.r;
                 curC = prev.c;
 
-                // 2. Count real exits (Valid paths that aren't known dead ends)
                 int openExits = 0;
                 for (int[] d : dirs) {
                     int nr = badR + d[0];
                     int nc = badC + d[1];
 
-                    // logic simplified since isValid checks bounds AND walls
                     if (map.isValid(nr, nc) && !GlobalKnowledge.isDeadEnd(nr, nc)) { 
                         openExits++;
                     }
                 }
 
-                // 3. Mark as Dead End if it's a cul-de-sac (<= 1 exit)
-                // CRITICAL FIX: Explicitly prevent marking the Start Node
                 boolean isStart = (badR == map.start.r && badC == map.start.c);
 
                 if (openExits <= 1 && !isStart) {
@@ -106,12 +101,11 @@ public class DFSPriorityDecoder {
         double manhattanDist = distR + distC;
 
         double basePenalty = 100000.0;
-        double distancePenalty = Math.pow(manhattanDist, 2) * 10.0; 
+        double distancePenalty = Math.pow(manhattanDist, 2) * 2.5; 
 
         if (path.isEmpty()) {
             return basePenalty * 2; 
         }
-
         return basePenalty + distancePenalty;
 
     }

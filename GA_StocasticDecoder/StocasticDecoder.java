@@ -23,7 +23,7 @@ public class StocasticDecoder {
         boolean[][] isVisited = new boolean[map.rows][map.cols];
         isVisited[curR][curC] = true;
 
-        int maxSteps = map.rows * map.cols * 3; 
+        int maxSteps = map.rows * map.cols * 10; 
         Random deterministicRand = new Random(chromo.hashCode());
 
         for (int step = 0; step < maxSteps; step++) {
@@ -107,12 +107,11 @@ public class StocasticDecoder {
         double manhattanDist = distR + distC;
 
         double basePenalty = 100000.0;
-        double distancePenalty = Math.pow(manhattanDist, 2) * 10.0; 
+        double distancePenalty = Math.pow(manhattanDist, 2) * 2.5; 
 
         if (path.isEmpty()) {
             return basePenalty * 2; 
         }
-
         return basePenalty + distancePenalty;
 
     }
