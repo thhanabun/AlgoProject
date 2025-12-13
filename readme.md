@@ -1,1 +1,1 @@
-Temp
+javac -d bin $(Get-ChildItem . -Recurse -Filter *.java | Select-Object -ExpandProperty FullName)

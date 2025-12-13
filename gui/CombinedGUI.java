@@ -592,7 +592,7 @@ public class CombinedGUI extends JFrame {
             double defaultMut = gaMutationRate;
 
             for (int gen = 1; gen <= gaMaxGenerations; gen++) {
-                population = ga.evolve(population, false, DijksChromosome.MUTATION_HYBRID);
+                population = ga.evolve(population, false, StocasticChromosome.MUTATION_HYBRID);
                 Collections.sort(population);
                 StocasticChromosome best = population.get(0);
 
@@ -640,10 +640,8 @@ public class CombinedGUI extends JFrame {
             if (blocks[i]) {
                 int r = i / map.cols;
                 int c = i % map.cols;
-                // Exclude global dead ends from this list to prevent color overlapping issues if needed,
-                // but usually fine to overlap.
                 if (!GlobalKnowledge.isDeadEnd(r, c)) {
-                    points.add(new Point(c, r)); // Store as x=col, y=row
+                    points.add(new Point(c, r));
                 }
             }
         }
