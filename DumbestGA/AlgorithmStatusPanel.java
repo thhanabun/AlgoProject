@@ -1,3 +1,5 @@
+package DumbestGA;
+
 import java.awt.BorderLayout;
 import java.awt.Font;
 import java.util.List;

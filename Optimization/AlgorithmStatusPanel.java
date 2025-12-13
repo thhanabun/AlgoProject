@@ -1,3 +1,5 @@
+package Optimization;
+
 import java.awt.BorderLayout;
 import java.awt.Font;
 import java.util.List;
@@ -21,7 +23,7 @@ class AlgorithmStatusPanel extends JPanel {
             add(dataLabel, BorderLayout.CENTER);
         }
 
-        public void updateStats(List<Point> path, MazeMap map) {
+        public void updateStats(List<Point> path, MazeMapOp map) {
         if (path == null || path.isEmpty()) {
             dataLabel.setText("No Path Found");
             return;
@@ -37,7 +39,7 @@ class AlgorithmStatusPanel extends JPanel {
         dataLabel.setText(String.format("<html><b>Steps:</b> %d<br><b>Cost:</b> %d</html>", path.size(), totalCost));
     }
 
-        public void updateStatsLive(int gen, int maxGen, List<Point> path, MazeMap map, double fitness, String status) {
+        public void updateStatsLive(int gen, int maxGen, List<Point> path, MazeMapOp map, double fitness, String status) {
         int totalCost = 0;
         if (path != null) {
             for (Point p : path) {

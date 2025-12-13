@@ -1,13 +1,15 @@
+package DumbestGA;
+
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
-import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
-public class MazeGUI extends JFrame {
+public class DumbestGUI extends JFrame {
 
-    // --- CardLayout ---
+    // --- Layout Components ---
     private CardLayout cardLayout;
     private JPanel mainContainer;
     private static final String MENU_PANEL = "Menu";
@@ -18,56 +20,54 @@ public class MazeGUI extends JFrame {
     private JPanel[][] gridCells; 
     private MazeMap currentMap;
 
-    // --- Panels & Components ---
+    // --- Status Panels ---
     private AlgorithmStatusPanel statusGreedy;
     private AlgorithmStatusPanel statusAStar;
-    private AlgorithmStatusPanel statusDijk;
     private AlgorithmStatusPanel statusGA;
 
     // --- Data Storage ---
     private List<Point> lastGreedyPath = null; 
-    private List<Point> lastAStarPath = null;  
+    private List<Point> lastAStarPath = null;   
     private List<Point> lastGAPath = null;
-    private List<Point> lastDijkPath = null;  
+    private boolean[] lastJunctionBlocks = null; // เก็บ Junction Block ของตัว Best
     
-    private double cachedGAFitness = 0;
-    private List<List<Point>> genPath = new ArrayList<>();
-    private List<Double> genFitness = new ArrayList<>();
+    // เก็บประวัติทุก Gen เพื่อทำ Slider Replay
+    private List<List<Point>> genPathHistory = new ArrayList<>();
+    private List<boolean[]> genJunctionBlockHistory = new ArrayList<>(); 
+    private List<Double> genFitnessHistory = new ArrayList<>();
 
     // --- GA Parameters ---
-    private int gaPopSize = 20;         
+    private int gaPopSize = 100;        
     private double gaMutationRate = 0.1; 
     private double gaCrossoverRate = 0.9;
     private int gaElitismCount = 5;
-    private int gaMaxGenerations = 50;
-    private int gaMutationMode = 0;
-    private int simulationSpeed = 100; 
+    private int gaMaxGenerations = 1000;
+    private int gaMutationMode = Chromosome2.MUTATION_HYBRID;
+    private int simulationSpeed = 20; // ms
 
+    // --- UI Controls ---
     private JCheckBox chkShowGreedy;
     private JCheckBox chkShowAStar;
-    private JCheckBox chkShowDijk;
     private JCheckBox chkShowGA;
+    private JCheckBox chkShowGlobal;   // [NEW] Global Dead Ends
+    private JCheckBox chkShowJunction; // [NEW] Local Junction Blocks
     
     private JSlider sliderSpeed;
     private JTextField txtSpeed;
-
     private JSlider sliderGenerations;
-    private JComboBox<String> cmbGenerations; 
     private JLabel lblGenVal;
 
     private JButton btnBack;
     private JButton btnReset;
     private JButton btnGreedy;
     private JButton btnAStar;
-    private JButton btnDijk;
     private JButton btnGA;
-    private JButton btnReplay;
     private JButton btnSettings;
 
-    public MazeGUI() {
-        setTitle("Maze Solver Ultimate (Synced Controls)");
+    public DumbestGUI() {
+        setTitle("Dumbest GUI (Hybrid Memory Visualizer)");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1200, 800); 
+        setSize(1280, 900); 
 
         cardLayout = new CardLayout();
         mainContainer = new JPanel(cardLayout);
@@ -97,21 +97,36 @@ public class MazeGUI extends JFrame {
         
         if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             Mazereader mr = new Mazereader();
-            //Reader r = new Reader();
             this.currentMap = new MazeMap(mr.read(fileChooser.getSelectedFile().getAbsolutePath()));
-            //this.currentMap = new MazeMap(r.read(fileChooser.getSelectedFile().getAbsolutePath()));
-            lastGAPath = null;
-            lastGreedyPath = null;
-            lastAStarPath = null;
-            lastDijkPath = null;
-            genPath.clear();
+            
+            resetData(); // Reset ทุกอย่างรวมถึง GlobalKnowledge
             
             if (currentMap != null) buildAndShowMaze(currentMap);
         }
     }
 
+    private void resetData() {
+        lastGAPath = null;
+        lastJunctionBlocks = null;
+        lastGreedyPath = null;
+        lastAStarPath = null;
+        genPathHistory.clear();
+        genJunctionBlockHistory.clear();
+        genFitnessHistory.clear();
+        
+        // *** สำคัญ: Reset Global Knowledge ***
+        if (currentMap != null) {
+            GlobalKnowledge.init(currentMap.rows, currentMap.cols);
+        }
+    }
+
     private void buildAndShowMaze(MazeMap map) {
+        // 1. GRID PANEL
         JPanel mazeGridPanel = new JPanel(new GridLayout(map.rows, map.cols));
+        if (map.rows > 100) CELL_SIZE = 4;
+        else if (map.rows > 50) CELL_SIZE = 8;
+        else CELL_SIZE = 15;
+
         mazeGridPanel.setPreferredSize(new Dimension(map.cols * CELL_SIZE, map.rows * CELL_SIZE));
         gridCells = new JPanel[map.rows][map.cols];
         renderMaze(mazeGridPanel, map);
@@ -120,138 +135,114 @@ public class MazeGUI extends JFrame {
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         scrollPane.getHorizontalScrollBar().setUnitIncrement(16);
 
+        // 2. CONTROL PANEL
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
         btnBack = new JButton("Back");
-        btnReset = new JButton("Clear");
+        btnReset = new JButton("Reset");
         btnGreedy = new JButton("Greedy");
         btnAStar = new JButton("A*");
-        btnDijk = new JButton("Dijkstra");
-        btnGA = new JButton("Run GA");
-        btnReplay = new JButton("Replay GA");
+        btnGA = new JButton("Run GA2");
         btnSettings = new JButton("Settings");
 
-        // Layers
-        JPanel layersPanel = new JPanel(new GridLayout(1, 3, 5, 0));
+        // Layers Checkboxes
+        JPanel layersPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         layersPanel.setBorder(BorderFactory.createTitledBorder("Layers"));
-        chkShowGreedy = new JCheckBox("Greedy"); chkShowGreedy.setForeground(Color.BLUE); chkShowGreedy.setSelected(true);
-        chkShowAStar = new JCheckBox("A*"); chkShowAStar.setForeground(Color.ORANGE.darker()); chkShowAStar.setSelected(true);
-        chkShowDijk = new JCheckBox("Dijkstra"); chkShowDijk.setForeground(Color.PINK.darker()); chkShowDijk.setSelected(true);
-        chkShowGA = new JCheckBox("GA"); chkShowGA.setForeground(Color.GREEN.darker()); chkShowGA.setSelected(true);
         
-        chkShowGreedy.addActionListener(e -> refreshMazeView());
-        chkShowAStar.addActionListener(e -> refreshMazeView());
-        chkShowDijk.addActionListener(e-> refreshMazeView());
-        chkShowGA.addActionListener(e -> refreshMazeView());
+        chkShowGreedy = new JCheckBox("Greedy"); 
+        chkShowGreedy.setForeground(Color.BLUE); 
+        chkShowGreedy.setSelected(true);
+        
+        chkShowAStar = new JCheckBox("A*"); 
+        chkShowAStar.setForeground(Color.ORANGE.darker()); 
+        chkShowAStar.setSelected(true);
+        
+        chkShowGA = new JCheckBox("GA Path"); 
+        chkShowGA.setForeground(Color.GREEN.darker()); 
+        chkShowGA.setSelected(true);
+        
+        chkShowGlobal = new JCheckBox("Global Dead Ends"); 
+        chkShowGlobal.setForeground(new Color(139, 0, 0)); // Dark Red
+        chkShowGlobal.setSelected(true);
+
+        chkShowJunction = new JCheckBox("Junction Blocks"); 
+        chkShowJunction.setForeground(new Color(255, 100, 100)); // Light Red
+        chkShowJunction.setSelected(true);
+        
+        Runnable refreshAction = this::refreshMazeView;
+        chkShowGreedy.addActionListener(e -> refreshAction.run());
+        chkShowAStar.addActionListener(e -> refreshAction.run());
+        chkShowGA.addActionListener(e -> refreshAction.run());
+        chkShowGlobal.addActionListener(e -> refreshAction.run());
+        chkShowJunction.addActionListener(e -> refreshAction.run());
         
         layersPanel.add(chkShowGreedy);
         layersPanel.add(chkShowAStar);
-        layersPanel.add(chkShowDijk);
         layersPanel.add(chkShowGA);
+        layersPanel.add(chkShowGlobal);
+        layersPanel.add(chkShowJunction);
 
-        // --- SPEED CONTROL (Slider + Text) ---
+        // Speed
         JPanel speedPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-        speedPanel.setBorder(BorderFactory.createTitledBorder("Speed (ms delay)"));
-        
-        sliderSpeed = new JSlider(0, 500, simulationSpeed);
-        sliderSpeed.setPreferredSize(new Dimension(100, 20));
-        
+        speedPanel.setBorder(BorderFactory.createTitledBorder("Delay (ms)"));
+        sliderSpeed = new JSlider(0, 100, simulationSpeed);
+        sliderSpeed.setPreferredSize(new Dimension(80, 20));
         txtSpeed = new JTextField(String.valueOf(simulationSpeed), 3);
-        txtSpeed.setHorizontalAlignment(JTextField.CENTER);
         
-        // Sync Logic: Slider -> Text
         sliderSpeed.addChangeListener(e -> {
             simulationSpeed = sliderSpeed.getValue();
             txtSpeed.setText(String.valueOf(simulationSpeed));
         });
-        
-        // Sync Logic: Text -> Slider
-        txtSpeed.addActionListener(e -> {
-            try {
-                int val = Integer.parseInt(txtSpeed.getText());
-                val = Math.max(0, Math.min(1000, val)); // Clamp 0-500
-                sliderSpeed.setValue(val);
-                simulationSpeed = val;
-            } catch (NumberFormatException ex) {
-                txtSpeed.setText(String.valueOf(sliderSpeed.getValue()));
-            }
-        });
-
         speedPanel.add(sliderSpeed);
         speedPanel.add(txtSpeed);
 
         topPanel.add(btnBack);
         topPanel.add(btnReset);
         topPanel.add(speedPanel);
+        topPanel.add(layersPanel);
         topPanel.add(btnGreedy);
         topPanel.add(btnAStar);
-        topPanel.add(btnDijk);
         topPanel.add(btnGA);
-        topPanel.add(btnReplay);
         topPanel.add(btnSettings);
-        topPanel.add(layersPanel);
 
-        // 3. BOTTOM PANEL (REPLAY)
+        // 3. TIMELINE
         JPanel bottomPanel = new JPanel(new BorderLayout(10, 0));
-        bottomPanel.setBorder(BorderFactory.createTitledBorder("Generation Replay History"));
+        bottomPanel.setBorder(BorderFactory.createTitledBorder("Generation Timeline"));
         
         sliderGenerations = new JSlider(0, 0, 0);
         sliderGenerations.setEnabled(false);
-        sliderGenerations.setMajorTickSpacing(10);
-        sliderGenerations.setPaintTicks(true);
-        
-        cmbGenerations = new JComboBox<>();
-        cmbGenerations.setPreferredSize(new Dimension(120, 25));
-        cmbGenerations.setEnabled(false);
-        
         lblGenVal = new JLabel("Gen: 0 / 0  ");
         lblGenVal.setFont(new Font("Arial", Font.BOLD, 14));
         
-        // --- SYNC: Slider -> Dropdown ---
         sliderGenerations.addChangeListener(e -> {
-            if (!sliderGenerations.getValueIsAdjusting() && !genPath.isEmpty()) {
+            if (!sliderGenerations.getValueIsAdjusting() && !genPathHistory.isEmpty()) {
                 int index = sliderGenerations.getValue();
-                if (index >= 0 && index < genPath.size()) {
-                    // Update Dropdown without triggering its listener loop
-                    cmbGenerations.removeItemListener(this::generationDropdownAction); // Detach
-                    if (index < cmbGenerations.getItemCount()) cmbGenerations.setSelectedIndex(index);
-                    cmbGenerations.addItemListener(this::generationDropdownAction); // Re-attach
-                    
+                if (index >= 0 && index < genPathHistory.size()) {
                     updateMazeToGeneration(index);
                 }
             }
         });
 
-        // --- SYNC: Dropdown -> Slider ---
-        cmbGenerations.addItemListener(this::generationDropdownAction);
-
-        JPanel leftBottom = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        leftBottom.add(cmbGenerations);
-        leftBottom.add(lblGenVal);
-
         bottomPanel.add(sliderGenerations, BorderLayout.CENTER);
-        bottomPanel.add(leftBottom, BorderLayout.EAST);
+        bottomPanel.add(lblGenVal, BorderLayout.EAST);
 
         // 4. DASHBOARD
         JPanel dashboard = new JPanel();
         dashboard.setLayout(new BoxLayout(dashboard, BoxLayout.Y_AXIS));
-        dashboard.setPreferredSize(new Dimension(200, 0));
+        dashboard.setPreferredSize(new Dimension(220, 0));
         dashboard.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
         statusGreedy = new AlgorithmStatusPanel("Greedy");
         statusAStar = new AlgorithmStatusPanel("Pure A*");
-        statusDijk = new AlgorithmStatusPanel("Dijkstra");
-        statusGA = new AlgorithmStatusPanel("Genetic Algorithm");
+        statusGA = new AlgorithmStatusPanel("Genetic Algorithm 2");
         
         dashboard.add(statusGreedy);
         dashboard.add(Box.createVerticalStrut(5));
         dashboard.add(statusAStar);
         dashboard.add(Box.createVerticalStrut(5));
-        dashboard.add(statusDijk);
-        dashboard.add(Box.createVerticalStrut(5));
         dashboard.add(statusGA);
-        dashboard.add(Box.createVerticalStrut(5));
+        dashboard.add(Box.createVerticalGlue());
 
         setupButtonActions(map);
 
@@ -265,143 +256,74 @@ public class MazeGUI extends JFrame {
         cardLayout.show(mainContainer, MAZE_PANEL);
     }
 
-    // Separate Listener method to easily attach/detach
-    private void generationDropdownAction(java.awt.event.ItemEvent e) {
-        if (e.getStateChange() == java.awt.event.ItemEvent.SELECTED) {
-            if (cmbGenerations.isEnabled() && !genPath.isEmpty()) {
-                int index = cmbGenerations.getSelectedIndex();
-                if (index >= 0) {
-                    sliderGenerations.setValue(index); // This will trigger the slider listener
-                }
-            }
-        }
-    }
-
     private void setupButtonActions(MazeMap map) {
         btnGreedy.addActionListener(e -> {
-            List<Point> path = DumbDecoder.getGreedyPath(map);
+            List<Point> path = DumbestDecoder.getGreedyPath(map);
             lastGreedyPath = path;
             refreshMazeView();
             statusGreedy.updateStats(path, map);
         });
 
         btnAStar.addActionListener(e -> {
-            List<Point> path = DumbDecoder.getPureAStarPath(map); 
+            List<Point> path = DumbestDecoder.getPureAStarPath(map); 
             lastAStarPath = path;
             refreshMazeView();
             statusAStar.updateStats(path, map);
         });
 
-        btnDijk.addActionListener(e -> {
-            List<Point> path = DumbDecoder.getDijkstraPath(map); 
-            lastDijkPath = path;
-            refreshMazeView();
-            statusDijk.updateStats(path, map);
-        });
-
-        btnGA.addActionListener(e -> {
-            if (lastGAPath != null) {
-                // If cached, just setup UI
-                setupReplayControls();
-                refreshMazeView();
-                statusGA.updateStatsLive(gaMaxGenerations, gaMaxGenerations, lastGAPath, map, cachedGAFitness, "Cached Result");
-            } else {
-                runRealTimeGA(map); 
-            }
-        });
-
-        btnReplay.addActionListener(e -> {
-            if (genPath != null && !genPath.isEmpty()) {
-                runReplayAnimation();
-            } else {
-                JOptionPane.showMessageDialog(this, "No GA history to replay. Run GA first.");
-            }
-        });
+        btnGA.addActionListener(e -> runRealTimeGA(map));
 
         btnReset.addActionListener(e -> {
-            lastGreedyPath = null;
-            lastAStarPath = null;
-            lastDijkPath = null;
-            lastGAPath = null;
-            genPath.clear();
-            genFitness.clear();
-            
+            resetData();
             refreshMazeView();
-            
             sliderGenerations.setValue(0);
             sliderGenerations.setEnabled(false);
-            cmbGenerations.removeAllItems();
-            cmbGenerations.setEnabled(false);
             lblGenVal.setText("Gen: 0 / 0");
-            
-            statusGA.setLoading("Memory Cleared");
+            statusGA.setLoading("Reset");
             statusGreedy.setLoading("Waiting...");
             statusAStar.setLoading("Waiting...");
-            statusDijk.setLoading("Waiting...");
         });
         
         btnBack.addActionListener(e -> cardLayout.show(mainContainer, MENU_PANEL));
         btnSettings.addActionListener(e -> showGASettings());
     }
 
-    private void setupReplayControls() {
-        // Fill Dropdown
-        cmbGenerations.removeItemListener(this::generationDropdownAction); // Detach temporarily
-        cmbGenerations.removeAllItems();
-        for(int i=0; i<genPath.size(); i++) {
-            cmbGenerations.addItem("Gen " + (i+1));
-        }
-        cmbGenerations.setEnabled(true);
-        cmbGenerations.addItemListener(this::generationDropdownAction); // Re-attach
-
-        // Setup Slider
-        sliderGenerations.setMaximum(genPath.size() - 1);
-        sliderGenerations.setValue(genPath.size() - 1);
-        sliderGenerations.setEnabled(true);
-        
-        // Select Last in Dropdown
-        if (cmbGenerations.getItemCount() > 0) {
-            cmbGenerations.setSelectedIndex(cmbGenerations.getItemCount() - 1);
-        }
-    }
-
+    // --- VISUALIZATION LOGIC ---
     private void refreshMazeView() {
         resetGridColors();
-        if (chkShowGreedy.isSelected() && lastGreedyPath != null) drawPath(lastGreedyPath, Color.BLUE);
-        if (chkShowAStar.isSelected() && lastAStarPath != null) drawPath(lastAStarPath, Color.ORANGE);
-        if (chkShowDijk.isSelected() && lastDijkPath != null) drawPath(lastDijkPath, Color.PINK);
-        if (chkShowGA.isSelected() && lastGAPath != null) drawPath(lastGAPath, Color.GREEN.darker());
-    }
+        
+        // 1. Draw Global Dead Ends (พื้นหลังสุด - สีแดงเข้ม)
+        if (chkShowGlobal.isSelected()) {
+            drawGlobalDeadEnds(new Color(139, 0, 0)); 
+        }
 
-    private void runReplayAnimation() {
-        setControlsEnabled(false); 
-        statusGA.setLoading("Replaying History...");
+        // 2. Draw Junction Blocks (ชั้นกลาง - สีชมพู)
+        if (chkShowJunction.isSelected() && lastJunctionBlocks != null) {
+            drawJunctionBlocks(lastJunctionBlocks, new Color(255, 105, 180)); 
+        }
 
-        Thread replayThread = new Thread(() -> {
-            for (int i = 0; i < genPath.size(); i++) {
-                final int index = i;
-                SwingUtilities.invokeLater(() -> {
-                    sliderGenerations.setValue(index);
-                });
-
-                try { Thread.sleep(simulationSpeed); } catch (InterruptedException e) {}
-            }
-
-            SwingUtilities.invokeLater(() -> {
-                statusGA.setLoading("Replay Finished");
-                setControlsEnabled(true); 
-            });
-        });
-        replayThread.start();
+        // 3. Draw Paths (ชั้นบนสุด)
+        if (chkShowGreedy.isSelected() && lastGreedyPath != null) {
+            drawPath(lastGreedyPath, new Color(173, 216, 230)); 
+        }
+        if (chkShowAStar.isSelected() && lastAStarPath != null) {
+            drawPath(lastAStarPath, new Color(255, 200, 0)); 
+        }
+        if (chkShowGA.isSelected() && lastGAPath != null) {
+            drawPath(lastGAPath, Color.GREEN.darker()); 
+        }
     }
 
     private void updateMazeToGeneration(int index) {
-        lastGAPath = genPath.get(index);
-        double historicalFit = genFitness.get(index);
+        if (index < 0 || index >= genPathHistory.size()) return;
         
-        refreshMazeView();
+        lastGAPath = genPathHistory.get(index);
+        lastJunctionBlocks = genJunctionBlockHistory.get(index); 
+        double historicalFit = genFitnessHistory.get(index);
         
-        lblGenVal.setText("Gen: " + (index + 1) + " / " + genPath.size() + "  ");
+        refreshMazeView(); 
+        
+        lblGenVal.setText("Gen: " + (index + 1) + " / " + genPathHistory.size() + "  ");
         statusGA.updateStatsLive(index + 1, gaMaxGenerations, lastGAPath, currentMap, historicalFit, "Replay Mode");
     }
 
@@ -409,23 +331,22 @@ public class MazeGUI extends JFrame {
         setControlsEnabled(false);
         statusGA.setLoading("Initializing...");
         
-        genPath.clear();
-        genFitness.clear();
+        genPathHistory.clear();
+        genJunctionBlockHistory.clear(); 
+        genFitnessHistory.clear();
         sliderGenerations.setValue(0);
         sliderGenerations.setEnabled(false);
-        cmbGenerations.removeAllItems();
-        cmbGenerations.setEnabled(false);
 
         Thread gaThread = new Thread(() -> {
-            int popSize = gaPopSize;         
+            int popSize = gaPopSize;        
             double mutationRate = gaMutationRate; 
             double crossoverRate = gaCrossoverRate;
             int elitismCount = gaElitismCount;
             int maxGenerations = gaMaxGenerations;
             int mutationMode = gaMutationMode;
 
-            GeneticAlgorithm ga = new GeneticAlgorithm(map, popSize, mutationRate, crossoverRate, elitismCount);
-            ArrayList<Chromosome> population = ga.initPopulation(null);
+            GeneticAlgorithm2 ga = new GeneticAlgorithm2(map, popSize, mutationRate, crossoverRate, elitismCount);
+            ArrayList<Chromosome2> population = ga.initPopulation(null); 
             
             double lastBestFitness = Double.MAX_VALUE;
             int stagnationCount = 0;
@@ -436,14 +357,16 @@ public class MazeGUI extends JFrame {
                 
                 population = ga.evolve(population, useHeuristic, mutationMode);
                 Collections.sort(population);
-                Chromosome best = population.get(0);
+                Chromosome2 best = population.get(0);
 
-                List<Point> rawPath = DumbDecoder.getPath(map, best, true);
-                List<Point> visualPath = new ArrayList<>(rawPath); 
+                // Clone Data for UI
+                List<Point> visualPath = new ArrayList<>(best.path); 
+                boolean[] visualJunctions = best.junctionBlocks.clone(); 
                 
-                synchronized(genPath) {
-                    genPath.add(visualPath);
-                    genFitness.add(best.fitness);
+                synchronized(genPathHistory) {
+                    genPathHistory.add(visualPath);
+                    genJunctionBlockHistory.add(visualJunctions); 
+                    genFitnessHistory.add(best.fitness);
                 }
 
                 if (Math.abs(best.fitness - lastBestFitness) < 0.0001) {
@@ -453,7 +376,23 @@ public class MazeGUI extends JFrame {
                     lastBestFitness = best.fitness; 
                     ga.setMutationRate(defaultMutationRate); 
                 }
+                
                 if (stagnationCount > 50) ga.setMutationRate(0.4); 
+
+                // if (stagnationCount > 50) { 
+                //     Chromosome2 survivor = population.get(0);
+                    
+                //     // *** สำคัญ: ต้องมั่นใจว่า survivor มี Path ติดตัวไปก่อนจะโดน Reset ***
+                //     if (survivor.path == null || survivor.path.isEmpty()) {
+                //         // ถ้าไม่มี ให้คำนวณใหม่เดี๋ยวนี้เลย ไม่งั้นกราฟิกหาย
+                //         survivor.path = new ArrayList<>();
+                //         DumbestDecoder.calculateFitness(map, survivor, survivor.path);
+                //     }
+
+                //     population = ga.initPopulation(null); 
+                //     population.set(0, survivor);
+                //     stagnationCount = 0;
+                // }
 
                 final String statusText = (stagnationCount > 50) ? "[Boost]" : "";
                 final int currentGen = gen;
@@ -461,27 +400,23 @@ public class MazeGUI extends JFrame {
                 
                 SwingUtilities.invokeLater(() -> {
                     lastGAPath = visualPath;
-                    refreshMazeView();
+                    lastJunctionBlocks = visualJunctions; 
+                    
+                    refreshMazeView(); 
                     statusGA.updateStatsLive(currentGen, maxGenerations, visualPath, map, currentFit, statusText);
                     
                     sliderGenerations.setMaximum(currentGen - 1);
                     sliderGenerations.setValue(currentGen - 1);
+                    sliderGenerations.setEnabled(true);
                     lblGenVal.setText("Gen: " + currentGen + "  ");
                 });
 
                 try { Thread.sleep(simulationSpeed); } catch (InterruptedException e) {} 
             }
             
-            Chromosome finalBest = population.get(0);
-            List<Point> finalPath = DumbDecoder.getPath(map, finalBest, true);
-            lastGAPath = new ArrayList<>(finalPath);
-            cachedGAFitness = finalBest.fitness;
-
             SwingUtilities.invokeLater(() -> {
-                refreshMazeView();
-                statusGA.updateStatsLive(maxGenerations, maxGenerations, finalPath, map, finalBest.fitness, "COMPLETED!");
-                setupReplayControls();
                 setControlsEnabled(true);
+                statusGA.setLoading("Done! Best Fitness: " + genFitnessHistory.get(genFitnessHistory.size()-1));
             });
         });
         gaThread.start();
@@ -492,19 +427,16 @@ public class MazeGUI extends JFrame {
         btnReset.setEnabled(enabled);
         btnGreedy.setEnabled(enabled);
         btnAStar.setEnabled(enabled);
-        btnDijk.setEnabled(enabled);
         btnGA.setEnabled(enabled);
         btnSettings.setEnabled(enabled);
-        sliderSpeed.setEnabled(enabled);
-        txtSpeed.setEnabled(enabled);
         chkShowGreedy.setEnabled(enabled);
         chkShowAStar.setEnabled(enabled);
-        chkShowDijk.setEnabled(enabled);
         chkShowGA.setEnabled(enabled);
+        chkShowGlobal.setEnabled(enabled);
+        chkShowJunction.setEnabled(enabled);
         
-        boolean hasHistory = !genPath.isEmpty();
+        boolean hasHistory = !genPathHistory.isEmpty();
         sliderGenerations.setEnabled(enabled && hasHistory);
-        cmbGenerations.setEnabled(enabled && hasHistory);
     }
 
     private void showGASettings() {
@@ -533,17 +465,7 @@ public class MazeGUI extends JFrame {
                 gaElitismCount = Integer.parseInt(txtEli.getText());
                 gaCrossoverRate = Double.parseDouble(txtCro.getText());
                 gaMutationMode = Integer.parseInt(txtMode.getText());
-                
-                lastGAPath = null; 
-                genPath.clear();
-                sliderGenerations.setEnabled(false);
-                sliderGenerations.setValue(0);
-                cmbGenerations.removeAllItems();
-                cmbGenerations.setEnabled(false);
-                lblGenVal.setText("Gen: 0 / 0");
-                
-                statusGA.setLoading("Settings Updated");
-                JOptionPane.showMessageDialog(this, "Settings Saved! Cache cleared.");
+                JOptionPane.showMessageDialog(this, "Settings Saved!");
             } catch (Exception e) {
                 JOptionPane.showMessageDialog(this, "Invalid Input!");
             }
@@ -555,16 +477,52 @@ public class MazeGUI extends JFrame {
             for (int c = 0; c < map.cols; c++) {
                 int val = map.getWeight(r,c);
                 JPanel cell = new JPanel(new BorderLayout());
-                cell.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+                cell.setBorder(BorderFactory.createLineBorder(new Color(230, 230, 230))); 
                 gridCells[r][c] = cell;
                 setCellColor(cell, val);
-                if(val > 0) {
+                
+                if(val > 5 && map.rows <= 30) {
                    JLabel lbl = new JLabel(String.valueOf(val));
-                   lbl.setFont(new Font("Arial", Font.PLAIN, 7));
+                   lbl.setFont(new Font("Arial", Font.PLAIN, 9));
+                   lbl.setForeground(Color.DARK_GRAY);
                    lbl.setHorizontalAlignment(JLabel.CENTER);
                    cell.add(lbl);
                 }
                 panel.add(cell);
+            }
+        }
+    }
+
+    // --- วาด Global Dead Ends (Static) ---
+    private void drawGlobalDeadEnds(Color c) {
+        if (GlobalKnowledge.deadEnds == null) return;
+        for (int r = 0; r < currentMap.rows; r++) {
+            for (int col = 0; col < currentMap.cols; col++) {
+                if ((r == currentMap.start.r && col == currentMap.start.c) || 
+                    (r == currentMap.goal.r && col == currentMap.goal.c)) continue;
+
+                if (GlobalKnowledge.isDeadEnd(r, col)) {
+                    gridCells[r][col].setBackground(c);
+                }
+            }
+        }
+    }
+
+    // --- วาด Junction Blocks (Individual) ---
+    private void drawJunctionBlocks(boolean[] blocks, Color c) {
+        if (blocks == null) return;
+        for (int r = 0; r < currentMap.rows; r++) {
+            for (int col = 0; col < currentMap.cols; col++) {
+                int idx = r * currentMap.cols + col;
+                if (idx < blocks.length && blocks[idx]) {
+                    if ((r == currentMap.start.r && col == currentMap.start.c) || 
+                        (r == currentMap.goal.r && col == currentMap.goal.c)) continue;
+                    
+                    // ถ้าตรงนี้เป็น Global Dead End ไปแล้ว ไม่ต้องวาดทับ
+                    if (GlobalKnowledge.isDeadEnd(r, col)) continue;
+                    
+                    gridCells[r][col].setBackground(c);
+                }
             }
         }
     }
@@ -574,8 +532,12 @@ public class MazeGUI extends JFrame {
         for(Point p : path) {
             if(p.r >= 0 && p.r < currentMap.rows && p.c >= 0 && p.c < currentMap.cols) {
                 JPanel cell = gridCells[p.r][p.c];
-                if(cell.getBackground() != Color.GREEN && cell.getBackground() != Color.RED)
+                Color bg = cell.getBackground();
+                // ห้ามทับสีสำคัญ (Start, Goal, Global, Junction)
+                if(!bg.equals(Color.GREEN) && !bg.equals(Color.RED) && 
+                   !bg.equals(new Color(139, 0, 0)) && !bg.equals(new Color(255, 100, 100))) {
                     cell.setBackground(c);
+                }
             }
         }
         repaint();
@@ -588,6 +550,7 @@ public class MazeGUI extends JFrame {
                 setCellColor(gridCells[r][c], currentMap.getWeight(r,c));
             }
         }
+        repaint();
     }
     
     private void setCellColor(JPanel cell, int val) {
@@ -598,6 +561,9 @@ public class MazeGUI extends JFrame {
     }
     
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new MazeGUI());
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {}
+        SwingUtilities.invokeLater(() -> new DumbestGUI());
     }
 }
