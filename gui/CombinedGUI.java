@@ -175,22 +175,22 @@ public class CombinedGUI extends JFrame {
         }
     }
 
-    private void calculateGlobalDeadEndsPoints() {
-        lastGASCTGlobalDeadEnds = new ArrayList<>();
-        if (currentMap == null) return;
+    private List<Point> calculateGlobalDeadEndsPoints() {
+        List<Point> currentDeadEnds = new ArrayList<>();
+        if (currentMap == null) return currentDeadEnds;
         
-        // This relies on GlobalKnowledge being populated by init/logic
-        for(int r=0; r<currentMap.rows; r++) {
-            for(int c=0; c<currentMap.cols; c++) {
-                 // Skip Start/Goal
-                 if ((r == currentMap.start.r && c == currentMap.start.c) || 
-                     (r == currentMap.goal.r && c == currentMap.goal.c)) continue;
+        for(int r = 0; r < currentMap.rows; r++) {
+            for(int c = 0; c < currentMap.cols; c++) {
+                // Skip Start/Goal
+                if ((r == currentMap.start.r && c == currentMap.start.c) || 
+                    (r == currentMap.goal.r && c == currentMap.goal.c)) continue;
 
-                 if(GlobalKnowledge.isDeadEnd(r, c)) {
-                     lastGASCTGlobalDeadEnds.add(new Point(c, r)); // Store as x=col, y=row
-                 }
+                if(GlobalKnowledge.isDeadEnd(r, c)) {
+                    currentDeadEnds.add(new Point(r, c)); 
+                }
             }
         }
+        return currentDeadEnds;
     }
 
     private void buildAndShowMaze(MazeMap map) {
@@ -598,8 +598,8 @@ public class CombinedGUI extends JFrame {
                 Collections.sort(population);
                 StocasticChromosome best = population.get(0);
 
+                List<Point> calculatedDeadEnds = calculateGlobalDeadEndsPoints();
                 List<Point> visualPath = new ArrayList<>(best.path);
-                // Convert boolean[] blocks to List<Point> for the Renderer
                 List<Point> blockPoints = convertBlocksToPoints(best.junctionBlocks, map);
                 
                 synchronized(historyGASCTPath) {
@@ -614,9 +614,12 @@ public class CombinedGUI extends JFrame {
 
                 final int cGen = gen;
                 final double cFit = best.fitness;
+                
                 SwingUtilities.invokeLater(() -> {
                     lastGASCTPath = visualPath;
                     lastGASCTJunctionBlocks = blockPoints;
+                    lastGASCTGlobalDeadEnds = calculatedDeadEnds;
+                    
                     refreshMazeView();
                     statusGASCT.updateStatsLive(cGen, gaMaxGenerations, visualPath, map, cFit, (cGen % 50 == 0 ? "Running" : ""));
                     sliderGenerations.setMaximum(cGen - 1);

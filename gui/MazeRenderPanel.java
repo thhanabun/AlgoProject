@@ -89,6 +89,7 @@ public class MazeRenderPanel extends JPanel {
                 }
             }
         }
+        
         public void overlayPoints(List<Point> points, Color c) {
         if (points == null || points.isEmpty()) return;
         

@@ -32,7 +32,8 @@ public class StocasticGA {
             StocasticChromosome c = new StocasticChromosome(map.rows, map.cols);
             c.randomInit(); 
             c.path = new ArrayList<>(); 
-            c.fitness = StocasticDecoder.calculateFitness(map, c, c.path);
+            //c.fitness = StocasticDecoder.calculateFitness(map, c, c.path);
+            c.fitness = DFSPriorityDecoder.calculateFitness(map, c, c.path);
             population.add(c);
         }
         return population;
@@ -55,7 +56,7 @@ public class StocasticGA {
             newPopulation.add(clone);
         }
 
-        int freshBloodCount = (int)(popSize * 0); 
+        int freshBloodCount = (int)(popSize * 0.15); 
         int breedCount = popSize - elitismCount - freshBloodCount;
 
         while (newPopulation.size() < elitismCount + breedCount) {
@@ -85,7 +86,8 @@ public class StocasticGA {
         newPopulation.parallelStream().forEach(child -> {
             if (child.fitness == -1) {
                 List<Point> tempPath = new ArrayList<>();
-                child.fitness = StocasticDecoder.calculateFitness(map, child, tempPath);
+                //child.fitness = StocasticDecoder.calculateFitness(map, child, tempPath);
+                child.fitness = DFSPriorityDecoder.calculateFitness(map, child, tempPath);
                 child.path = tempPath;
             }
         });
