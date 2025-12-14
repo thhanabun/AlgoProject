@@ -63,7 +63,6 @@ public class CombinedGUI extends JFrame {
     private List<List<Point>> historyGADijkPath = new ArrayList<>();
     private List<Double> historyGADijkFitness = new ArrayList<>();
 
-    private List<Point> lastGlobalDeadEnds = null; // To store calculated dead ends for rendering
     
     // --- Data Storage: GA SCT ---
     private List<Point> lastGASCTPath = null;
@@ -71,6 +70,7 @@ public class CombinedGUI extends JFrame {
     private List<List<Point>> historyGASCTPath = new ArrayList<>();
     private List<List<Point>> historyGASCTJunctions = new ArrayList<>(); // Store junctions as points for replay
     private List<Double> historyGASCTFitness = new ArrayList<>();
+    private List<Point> lastGlobalDeadEndsSCT = null; // To store calculated dead ends for rendering
 
     // --- Data Storage: GA DFS ---
     private List<Point> lastGADFSPath = null;
@@ -78,6 +78,7 @@ public class CombinedGUI extends JFrame {
     private List<List<Point>> historyGADFSPath = new ArrayList<>();
     private List<List<Point>> historyGADFSJunctions = new ArrayList<>(); // Store junctions as points for replay
     private List<Double> historyGADFSTFitness = new ArrayList<>();
+    private List<Point> lastGlobalDeadEndsDFS = null;
 
     // --- State Tracking ---
     private enum LastRun { NONE, GA_DIJK, GA_SCT, GA_DFS }
@@ -102,7 +103,8 @@ public class CombinedGUI extends JFrame {
     private JCheckBox chkShowJunctionSCT; 
     private JCheckBox chkShowDFS;
     private JCheckBox chkShowJunctionDFS;
-    private JCheckBox chkShowGlobal;   
+    private JCheckBox chkShowGlobalSCT;   
+    private JCheckBox chkShowGlobalDFS;
     
     private JSlider sliderSpeed;
     private JTextField txtSpeed;
@@ -174,7 +176,7 @@ public class CombinedGUI extends JFrame {
         lastGADijkPath = null;
         lastGASCTPath = null;
         lastGASCTJunctionBlocks = null;
-        lastGlobalDeadEnds = null;
+        lastGlobalDeadEndsSCT = null;
         lastGADFSPath = null;
         lastGADFSJunctionBlocks = null;
         
@@ -194,11 +196,11 @@ public class CombinedGUI extends JFrame {
             StocasticGlobalKnowledge.init(currentMap.rows, currentMap.cols);
             DFSGlobalKnowledge.init(currentMap.rows, currentMap.cols);
             // Pre-calculate global dead ends for visualization
-            calculateGlobalDeadEndsPoints(); 
+            lastGlobalDeadEndsSCT = calculateGlobalDeadEndsPointsSCT();
         }
     }
 
-    private List<Point> calculateGlobalDeadEndsPoints() {
+    private List<Point> calculateGlobalDeadEndsPointsSCT() {
         List<Point> currentDeadEnds = new ArrayList<>();
         if (currentMap == null) return currentDeadEnds;
         
@@ -209,6 +211,24 @@ public class CombinedGUI extends JFrame {
                     (r == currentMap.goal.r && c == currentMap.goal.c)) continue;
 
                 if(StocasticGlobalKnowledge.isDeadEnd(r, c)) {
+                    currentDeadEnds.add(new Point(r, c)); 
+                }
+            }
+        }
+        return currentDeadEnds;
+    }
+
+    private List<Point> calculateGlobalDeadEndsDFS() {
+        List<Point> currentDeadEnds = new ArrayList<>();
+        if (currentMap == null) return currentDeadEnds;
+        
+        for(int r = 0; r < currentMap.rows; r++) {
+            for(int c = 0; c < currentMap.cols; c++) {
+                if ((r == currentMap.start.r && c == currentMap.start.c) || 
+                    (r == currentMap.goal.r && c == currentMap.goal.c)) continue;
+
+                // Check DFSKnowledge instead of Stocastic
+                if(DFSGlobalKnowledge.isDeadEnd(r, c)) {
                     currentDeadEnds.add(new Point(r, c)); 
                 }
             }
@@ -272,36 +292,50 @@ public class CombinedGUI extends JFrame {
         chkShowGreedy = new JCheckBox("Greedy"); chkShowGreedy.setForeground(Color.BLUE); chkShowGreedy.setSelected(true);
         chkShowAStar = new JCheckBox("A*"); chkShowAStar.setForeground(Color.ORANGE.darker()); chkShowAStar.setSelected(true);
         chkShowDijk = new JCheckBox("Dijk"); chkShowDijk.setForeground(Color.MAGENTA.darker()); chkShowDijk.setSelected(true);
-        
         chkShowGADijk = new JCheckBox("GA Dijk"); chkShowGADijk.setForeground(Color.GREEN.darker()); chkShowGADijk.setSelected(true);
+        
         chkShowGASCT = new JCheckBox("GA SCT"); chkShowGASCT.setForeground(new Color(0, 100, 0)); chkShowGASCT.setSelected(true);
-        chkShowJunctionSCT = new JCheckBox("Junction Blocks"); chkShowJunctionSCT.setForeground(new Color(255, 105, 180)); chkShowJunctionSCT.setSelected(true);
-        chkShowDFS = new JCheckBox("GA DFS"); chkShowDFS.setForeground(Color.RED); chkShowDFS.setSelected(true);
-        chkShowJunctionDFS = new JCheckBox("DFS Junctions"); chkShowJunctionDFS.setForeground(Color.CYAN.darker()); chkShowJunctionDFS.setSelected(true);
-        chkShowGlobal = new JCheckBox("Global DeadEnds"); chkShowGlobal.setForeground(new Color(139, 0, 0)); chkShowGlobal.setSelected(true);
+        chkShowJunctionSCT = new JCheckBox("SCT Junction"); chkShowJunctionSCT.setForeground(new Color(255, 105, 180)); chkShowJunctionSCT.setSelected(true);
+        chkShowGlobalSCT = new JCheckBox("Global DeadEnds"); chkShowGlobalSCT.setForeground(new Color(139, 0, 0)); chkShowGlobalSCT.setSelected(true);
 
+        chkShowDFS = new JCheckBox("GA DFS"); chkShowDFS.setForeground(Color.RED); chkShowDFS.setSelected(true);
+        chkShowJunctionDFS = new JCheckBox("DFS Junc"); chkShowJunctionDFS.setForeground(Color.CYAN.darker()); chkShowJunctionDFS.setSelected(true);
+        chkShowGlobalDFS = new JCheckBox("DFS DeadEnd"); chkShowGlobalDFS.setForeground(new Color(139, 0, 0)); chkShowGlobalDFS.setSelected(true);
         // Reduce font size for checkboxes too if you want them smaller
-        Font chkFont = new Font("Arial", Font.PLAIN, 11);
+        Font chkFont = new Font("Arial", Font.PLAIN, 10); // Slightly smaller to fit 6 columns
         chkShowGreedy.setFont(chkFont); chkShowAStar.setFont(chkFont); chkShowDijk.setFont(chkFont);
-        chkShowGADijk.setFont(chkFont); chkShowGASCT.setFont(chkFont); chkShowJunctionSCT.setFont(chkFont);
-        chkShowDFS.setFont(chkFont); chkShowJunctionDFS.setFont(chkFont); chkShowGlobal.setFont(chkFont);
+        chkShowGADijk.setFont(chkFont); 
+        chkShowGASCT.setFont(chkFont); chkShowJunctionSCT.setFont(chkFont); chkShowGlobalSCT.setFont(chkFont);
+        chkShowDFS.setFont(chkFont); chkShowJunctionDFS.setFont(chkFont); chkShowGlobalDFS.setFont(chkFont);
+
 
         Runnable refresh = this::refreshMazeView;
         chkShowGreedy.addActionListener(e -> refresh.run());
         chkShowAStar.addActionListener(e -> refresh.run());
-        chkShowDijk.addActionListener(e-> refresh.run());
+        chkShowDijk.addActionListener(e -> refresh.run());
         chkShowGADijk.addActionListener(e -> refresh.run());
+        
         chkShowGASCT.addActionListener(e -> refresh.run());
         chkShowJunctionSCT.addActionListener(e -> refresh.run());
-        chkShowDFS.addActionListener(e -> refresh.run());         
-        chkShowJunctionDFS.addActionListener(e -> refresh.run());
-        chkShowGlobal.addActionListener(e -> refresh.run());
+        chkShowGlobalSCT.addActionListener(e -> refresh.run());
         
-        layersPanel.add(chkShowGreedy); layersPanel.add(chkShowAStar); layersPanel.add(chkShowDijk);
-        layersPanel.add(chkShowGADijk); layersPanel.add(chkShowGASCT);
-        layersPanel.add(chkShowGlobal); layersPanel.add(chkShowJunctionSCT);
-        layersPanel.add(chkShowGADijk); layersPanel.add(chkShowGASCT); layersPanel.add(chkShowDFS);
-        layersPanel.add(chkShowGlobal); layersPanel.add(chkShowJunctionSCT); layersPanel.add(chkShowJunctionDFS);
+        chkShowDFS.addActionListener(e -> refresh.run());          
+        chkShowJunctionDFS.addActionListener(e -> refresh.run());
+        chkShowGlobalDFS.addActionListener(e -> refresh.run());
+        
+        layersPanel.add(chkShowGreedy); 
+        layersPanel.add(chkShowAStar); 
+        layersPanel.add(chkShowDijk);
+        layersPanel.add(chkShowGASCT); 
+        layersPanel.add(chkShowJunctionSCT);
+        layersPanel.add(chkShowGlobalSCT); // SCT Dead Ends
+            
+        // Row 2: SCT and DFS aligned
+        
+        layersPanel.add(chkShowGADijk);
+        layersPanel.add(chkShowDFS); 
+        layersPanel.add(chkShowJunctionDFS);
+        layersPanel.add(chkShowGlobalDFS);
 
         // --- SPEED CONTROL ---
         JPanel speedPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
@@ -402,7 +436,7 @@ public class CombinedGUI extends JFrame {
 
     private void styleSmallButton(JButton btn) {
         btn.setFont(new Font("Arial", Font.BOLD, 11)); // Smaller font (11pt)
-        btn.setMargin(new Insets(2, 2, 2, 2));         // Tighter padding (Top, Left, Bottom, Right)
+        btn.setMargin(new Insets(1, 1, 1, 1));         // Tighter padding (Top, Left, Bottom, Right)
         btn.setFocusPainted(false);                    // Removes the focus box line for a cleaner look
     }
 
@@ -530,37 +564,37 @@ public class CombinedGUI extends JFrame {
     }
 
     // --- VISUALIZATION ---
-    private void refreshMazeView() {
+private void refreshMazeView() {
         if (mazeCanvas == null) return;
         mazeCanvas.resetToBase();
 
-        // 1. Draw Global Dead Ends (SCT) - Red
-        if (chkShowGlobal.isSelected() && lastGlobalDeadEnds != null) {
-            mazeCanvas.overlayPoints(lastGlobalDeadEnds, new Color(139, 0, 0)); 
+        // 1. Draw SCT Layers (DeadEnds and Junctions)
+        if (chkShowGlobalSCT.isSelected() && lastGlobalDeadEndsSCT != null) {
+            mazeCanvas.overlayPoints(lastGlobalDeadEndsSCT, new Color(139, 0, 0)); // Dark Red
+        }
+        if (chkShowJunctionSCT.isSelected() && lastGASCTJunctionBlocks != null) {
+            mazeCanvas.overlayPoints(lastGASCTJunctionBlocks, new Color(255, 105, 180)); // Pink
         }
 
-        // 2. Draw Junction Blocks (SCT) - Pink
-        if (chkShowJunctionSCT.isSelected() && lastGASCTJunctionBlocks != null) {
-            mazeCanvas.overlayPoints(lastGASCTJunctionBlocks, new Color(255, 105, 180));
+        // 2. Draw DFS Layers (DeadEnds and Junctions)
+        if (chkShowGlobalDFS.isSelected() && lastGlobalDeadEndsDFS != null) {
+            mazeCanvas.overlayPoints(lastGlobalDeadEndsDFS, new Color(139, 0, 0)); // Dark Red
         }
         if (chkShowJunctionDFS.isSelected() && lastGADFSJunctionBlocks != null) {
             mazeCanvas.overlayPoints(lastGADFSJunctionBlocks, Color.CYAN.darker());
         }
 
-
         // 3. Paths
         if (chkShowGreedy.isSelected() && lastGreedyPath != null) mazeCanvas.overlayPath(lastGreedyPath, Color.BLUE);
         if (chkShowAStar.isSelected() && lastAStarPath != null) mazeCanvas.overlayPath(lastAStarPath, Color.ORANGE);
         if (chkShowDijk.isSelected() && lastDijkPath != null) mazeCanvas.overlayPath(lastDijkPath, Color.MAGENTA.darker());
+        
         if (chkShowDFS.isSelected() && lastGADFSPath != null) mazeCanvas.overlayPath(lastGADFSPath, Color.RED);
-        
         if (chkShowGADijk.isSelected() && lastGADijkPath != null) mazeCanvas.overlayPath(lastGADijkPath, Color.GREEN.darker());
-        if (chkShowGASCT.isSelected() && lastGASCTPath != null) mazeCanvas.overlayPath(lastGASCTPath, new Color(0, 100, 0)); // Dark Green
-    
-        
+        if (chkShowGASCT.isSelected() && lastGASCTPath != null) mazeCanvas.overlayPath(lastGASCTPath, new Color(0, 100, 0)); 
+   
         mazeCanvas.repaint();
     }
-
     private void runReplayAnimation() {
         setControlsEnabled(false); 
         int max = (lastRunMode == LastRun.GA_DIJK) ? historyGADijkPath.size() : historyGASCTPath.size();
@@ -706,7 +740,7 @@ public class CombinedGUI extends JFrame {
                 StocasticChromosome best = population.get(0);
                 
 
-                List<Point> calculatedDeadEnds = calculateGlobalDeadEndsPoints();
+                List<Point> calculatedDeadEnds = calculateGlobalDeadEndsPointsSCT();
                 List<Point> visualPath = new ArrayList<>(best.path);
                 final double currentFit = best.fitness;
                 final int currentLen = visualPath.size();
@@ -739,7 +773,7 @@ public class CombinedGUI extends JFrame {
                 SwingUtilities.invokeLater(() -> {
                     lastGASCTPath = visualPath;
                     lastGASCTJunctionBlocks = blockPoints;
-                    lastGlobalDeadEnds = calculatedDeadEnds;
+                    lastGlobalDeadEndsSCT = calculatedDeadEnds;
                     
                     refreshMazeView();
                     statusGASCT.updateStatsLive(cGen, gaMaxGenerations, visualPath, map, cFit, (cGen % 50 == 0 ? "Running" : ""));
@@ -779,7 +813,6 @@ public class CombinedGUI extends JFrame {
         sliderGenerations.setValue(0);
     
         Thread gaThread = new Thread(() -> {
-            // Assuming DFSGA constructor signature matches StocasticGA
             DFSGA ga = new DFSGA(map, gaPopSize, gaMutationRate, gaCrossoverRate, gaElitismCount);
             ArrayList<DFSChromosome> population = ga.initPopulation(null);
             
@@ -788,27 +821,24 @@ public class CombinedGUI extends JFrame {
             double defaultMut = gaMutationRate;
     
             for (int gen = 1; gen <= gaMaxGenerations; gen++) {
-                // Assuming evolve signature matches
                 population = ga.evolve(population, false, 0); 
                 Collections.sort(population);
                 DFSChromosome best = population.get(0);
+                
+                // --- ADDED: Calculate Dead Ends Live ---
+                List<Point> currentDeadEnds = calculateGlobalDeadEndsDFS();
+                // ---------------------------------------
+
                 if (stopRequested) {
                     SwingUtilities.invokeLater(() -> statusGADFS.setLoading("Stopped by User"));
                     break; 
                 }
     
-                // Assuming DFSChromosome has .path and .junctionBlocks public fields
                 List<Point> visualPath = new ArrayList<>(best.path);
                 List<Point> blockPoints = convertBlocksToPoints(best.junctionBlocks, map);
                 final double currentFit = best.fitness;
                 final int currentLen = visualPath.size();
-
-                // 2. Update Stop Button Logic
-                if (stopRequested) {
-                    SwingUtilities.invokeLater(() -> statusGADFS
-                            .setLoading(String.format("Stopped (Fit: %.2f, Step: %d)", currentFit, currentLen)));
-                    break;
-                }
+                
                 synchronized(historyGADFSPath) {
                     historyGADFSPath.add(visualPath);
                     historyGADFSJunctions.add(blockPoints);
@@ -823,12 +853,17 @@ public class CombinedGUI extends JFrame {
                             .setLoading(String.format("Converged (Fit: %.2f, Step: %d)", currentFit, currentLen)));
                     break;
                 }
+                
                 final int cGen = gen;
                 final double cFit = best.fitness;
                 
                 SwingUtilities.invokeLater(() -> {
                     lastGADFSPath = visualPath;
                     lastGADFSJunctionBlocks = blockPoints;
+                    
+                    // --- ADDED: Update the UI variable ---
+                    lastGlobalDeadEndsDFS = currentDeadEnds;
+                    // -------------------------------------
                     
                     refreshMazeView();
                     statusGADFS.updateStatsLive(cGen, gaMaxGenerations, visualPath, map, cFit, (cGen % 50 == 0 ? "Running" : ""));
@@ -838,6 +873,7 @@ public class CombinedGUI extends JFrame {
                 });
                 try { Thread.sleep(simulationSpeed); } catch (Exception e) {}
             }
+            
             final int finalStagnationCount = stagnationCount;
             SwingUtilities.invokeLater(() -> {
                 setupReplayControls(historyGADFSPath.size());
