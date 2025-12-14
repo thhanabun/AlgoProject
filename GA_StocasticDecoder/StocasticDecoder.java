@@ -45,7 +45,7 @@ public class StocasticDecoder {
                 int nc = curC + d[1];
 
                 if (map.isValid(nr, nc) && !isVisited[nr][nc] 
-                    && !GlobalKnowledge.isDeadEnd(nr, nc) 
+                    && !StocasticGlobalKnowledge.isDeadEnd(nr, nc) 
                     && !chromo.isMyBlock(nr, nc)) {
                         
                     double p = chromo.getPriority(nr, nc);
@@ -87,13 +87,13 @@ public class StocasticDecoder {
                     for (int[] d : dirs) {
                         int nr = badR + d[0];
                         int nc = badC + d[1];
-                        if (map.isValid(nr, nc) && !GlobalKnowledge.isDeadEnd(nr, nc) && !(badR == map.start.r && badC == map.start.c)) { //fix start
+                        if (map.isValid(nr, nc) && !StocasticGlobalKnowledge.isDeadEnd(nr, nc) && !(badR == map.start.r && badC == map.start.c)) { //fix start
                             openExits++;
                         }
                     }
 
                     if (openExits <= 1) {
-                        GlobalKnowledge.markDeadEnd(badR, badC);
+                        StocasticGlobalKnowledge.markDeadEnd(badR, badC);
                     }
                     
                 } else {

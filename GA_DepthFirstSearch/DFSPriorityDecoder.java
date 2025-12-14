@@ -1,4 +1,4 @@
-package GA_StocasticDecoder;
+package GA_DepthFirstSearch;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -7,7 +7,7 @@ import Struct.MazeMap;
 import Struct.Point;
 
 public class DFSPriorityDecoder {
-    public static double calculateFitness(MazeMap map, StocasticChromosome chromo, List<Point> path) {
+    public static double calculateFitness(MazeMap map, DFSChromosome chromo, List<Point> path) {
         path.clear();
         Point start = map.start;
         Point goal = map.goal;
@@ -38,7 +38,7 @@ public class DFSPriorityDecoder {
                 int nc = curC + d[1];
 
                 if (map.isValid(nr, nc) && !isVisited[nr][nc] 
-                    && !GlobalKnowledge.isDeadEnd(nr, nc) 
+                    && !DFSGlobalKnowledge.isDeadEnd(nr, nc) 
                     && !chromo.isMyBlock(nr, nc)) {
                         
                     double p = chromo.getPriority(nr, nc); 
@@ -79,7 +79,7 @@ public class DFSPriorityDecoder {
                     int nr = badR + d[0];
                     int nc = badC + d[1];
 
-                    if (map.isValid(nr, nc) && !GlobalKnowledge.isDeadEnd(nr, nc)) { 
+                    if (map.isValid(nr, nc) && !DFSGlobalKnowledge.isDeadEnd(nr, nc)) { 
                         openExits++;
                     }
                 }
@@ -87,7 +87,7 @@ public class DFSPriorityDecoder {
                 boolean isStart = (badR == map.start.r && badC == map.start.c);
 
                 if (openExits <= 1 && !isStart) {
-                    GlobalKnowledge.markDeadEnd(badR, badC);
+                    DFSGlobalKnowledge.markDeadEnd(badR, badC);
                 }
                 
             } else {
@@ -111,7 +111,7 @@ public class DFSPriorityDecoder {
     }
 
 
-    public static List<Point> getPath(MazeMap map, StocasticChromosome c, boolean b) {
+    public static List<Point> getPath(MazeMap map, DFSChromosome c, boolean b) {
         List<Point> p = new ArrayList<>();
         calculateFitness(map, c, p);
         return p;

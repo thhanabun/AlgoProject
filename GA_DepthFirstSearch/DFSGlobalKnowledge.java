@@ -1,5 +1,6 @@
-package GA_StocasticDecoder;
-public class GlobalKnowledge {
+package GA_DepthFirstSearch;
+
+public class DFSGlobalKnowledge {
     public static boolean[] deadEnds; 
     public static int rows, cols;
 

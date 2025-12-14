@@ -1,14 +1,16 @@
 package gui;
 import javax.swing.*;
 
-import GA_DIjksDecoder.DijksChromosome;
-import GA_DIjksDecoder.DijksDecoder;
-import GA_DIjksDecoder.DijksGA;
-
+import GA_DijksDecoder.DijksChromosome;
+import GA_DijksDecoder.DijksDecoder;
+import GA_DijksDecoder.DijksGA;
+import GA_DepthFirstSearch.DFSGlobalKnowledge;
 import GA_StocasticDecoder.StocasticChromosome;
-import GA_StocasticDecoder.StocasticDecoder;
 import GA_StocasticDecoder.StocasticGA;
-import GA_StocasticDecoder.GlobalKnowledge;
+import GA_StocasticDecoder.StocasticGlobalKnowledge;
+import GA_DepthFirstSearch.DFSChromosome;
+import GA_DepthFirstSearch.DFSGA;
+import GA_DepthFirstSearch.DFSGlobalKnowledge;
 
 import MazeSolverAlgo.Astar;
 
@@ -48,6 +50,7 @@ public class CombinedGUI extends JFrame {
     private AlgorithmStatusPanel statusAStar;
     private AlgorithmStatusPanel statusDijk;
     private AlgorithmStatusPanel statusGADijk; // Formerly GA in MazeGUI
+    private AlgorithmStatusPanel statusGADFS;
     private AlgorithmStatusPanel statusGASCT;  // Formerly GA in DumbestGUI
 
     // --- Data Storage: Standard Algos ---
@@ -60,16 +63,24 @@ public class CombinedGUI extends JFrame {
     private List<List<Point>> historyGADijkPath = new ArrayList<>();
     private List<Double> historyGADijkFitness = new ArrayList<>();
 
+    private List<Point> lastGlobalDeadEnds = null; // To store calculated dead ends for rendering
+    
     // --- Data Storage: GA SCT ---
     private List<Point> lastGASCTPath = null;
-    private List<Point> lastGASCTGlobalDeadEnds = null; // To store calculated dead ends for rendering
     private List<Point> lastGASCTJunctionBlocks = null; // To store junction blocks for rendering
     private List<List<Point>> historyGASCTPath = new ArrayList<>();
     private List<List<Point>> historyGASCTJunctions = new ArrayList<>(); // Store junctions as points for replay
     private List<Double> historyGASCTFitness = new ArrayList<>();
 
+    // --- Data Storage: GA DFS ---
+    private List<Point> lastGADFSPath = null;
+    private List<Point> lastGADFSJunctionBlocks = null; // To store junction blocks for rendering
+    private List<List<Point>> historyGADFSPath = new ArrayList<>();
+    private List<List<Point>> historyGADFSJunctions = new ArrayList<>(); // Store junctions as points for replay
+    private List<Double> historyGADFSTFitness = new ArrayList<>();
+
     // --- State Tracking ---
-    private enum LastRun { NONE, GA_DIJK, GA_SCT }
+    private enum LastRun { NONE, GA_DIJK, GA_SCT, GA_DFS }
     private LastRun lastRunMode = LastRun.NONE;
 
     // --- GA Parameters (Shared) ---
@@ -80,6 +91,7 @@ public class CombinedGUI extends JFrame {
     private int gaMaxGenerations = 1000;
     //private int gaMutationMode = 0; // 0 for Dijk, Hybrid for SCT
     private int simulationSpeed = 20; 
+    private int earlyStopStagnationLimit = gaMaxGenerations;
 
     // --- UI Controls ---
     private JCheckBox chkShowGreedy;
@@ -87,8 +99,10 @@ public class CombinedGUI extends JFrame {
     private JCheckBox chkShowDijk;
     private JCheckBox chkShowGADijk;
     private JCheckBox chkShowGASCT;
-    private JCheckBox chkShowGlobal;   // [SCT Feature]
-    private JCheckBox chkShowJunction; // [SCT Feature]
+    private JCheckBox chkShowJunctionSCT; 
+    private JCheckBox chkShowDFS;
+    private JCheckBox chkShowJunctionDFS;
+    private JCheckBox chkShowGlobal;   
     
     private JSlider sliderSpeed;
     private JTextField txtSpeed;
@@ -104,8 +118,11 @@ public class CombinedGUI extends JFrame {
     private JButton btnDijk;
     private JButton btnRunGADijk;
     private JButton btnRunGASCT;
+    private JButton btnRunDFS;
     private JButton btnReplay;
     private JButton btnSettings;
+    private JButton btnStop;
+    private volatile boolean stopRequested = false;
 
     public CombinedGUI() {
         setTitle("Maze Solver Ultimate: Combined Edition (Dijk + SCT)");
@@ -151,25 +168,31 @@ public class CombinedGUI extends JFrame {
     }
 
     private void resetAllData() {
-        lastGADijkPath = null;
-        lastGASCTPath = null;
         lastGreedyPath = null;
         lastAStarPath = null;
         lastDijkPath = null;
+        lastGADijkPath = null;
+        lastGASCTPath = null;
         lastGASCTJunctionBlocks = null;
-        lastGASCTGlobalDeadEnds = null;
+        lastGlobalDeadEnds = null;
+        lastGADFSPath = null;
+        lastGADFSJunctionBlocks = null;
         
         historyGADijkPath.clear();
         historyGADijkFitness.clear();
         historyGASCTPath.clear();
         historyGASCTJunctions.clear();
         historyGASCTFitness.clear();
+        historyGADFSPath.clear();
+        historyGADFSJunctions.clear();
+        historyGADFSTFitness.clear();
         
         lastRunMode = LastRun.NONE;
         
         // ** IMPORTANT: Initialize GlobalKnowledge for SCT **
         if (currentMap != null) {
-            GlobalKnowledge.init(currentMap.rows, currentMap.cols);
+            StocasticGlobalKnowledge.init(currentMap.rows, currentMap.cols);
+            DFSGlobalKnowledge.init(currentMap.rows, currentMap.cols);
             // Pre-calculate global dead ends for visualization
             calculateGlobalDeadEndsPoints(); 
         }
@@ -185,7 +208,7 @@ public class CombinedGUI extends JFrame {
                 if ((r == currentMap.start.r && c == currentMap.start.c) || 
                     (r == currentMap.goal.r && c == currentMap.goal.c)) continue;
 
-                if(GlobalKnowledge.isDeadEnd(r, c)) {
+                if(StocasticGlobalKnowledge.isDeadEnd(r, c)) {
                     currentDeadEnds.add(new Point(r, c)); 
                 }
             }
@@ -227,18 +250,23 @@ public class CombinedGUI extends JFrame {
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
-        btnBack = new JButton("Back");
-        btnReset = new JButton("Clear");
-        btnGreedy = new JButton("Greedy");
-        btnAStar = new JButton("A*");
-        btnDijk = new JButton("Dijkstra");
-        btnRunGADijk = new JButton("Run GA (Dijk)");
-        btnRunGASCT = new JButton("Run GA (SCT)");
-        btnReplay = new JButton("Replay");
-        btnSettings = new JButton("Settings");
+        // Initialize Buttons and Apply Small Style
+        btnBack = new JButton("Back");           styleSmallButton(btnBack);
+        btnReset = new JButton("Clear");         styleSmallButton(btnReset);
+        btnGreedy = new JButton("Greedy");       styleSmallButton(btnGreedy);
+        btnAStar = new JButton("A*");            styleSmallButton(btnAStar);
+        btnDijk = new JButton("Dijkstra");       styleSmallButton(btnDijk);
+        
+        btnRunGADijk = new JButton("Run GA (Dijk)"); styleSmallButton(btnRunGADijk);
+        btnRunGASCT = new JButton("Run GA (SCT)");   styleSmallButton(btnRunGASCT);
+        btnRunDFS = new JButton("Run GA (DFS)");     styleSmallButton(btnRunDFS);
+        
+        btnStop = new JButton("STOP");           styleSmallButton(btnStop);
+        btnReplay = new JButton("Replay");       styleSmallButton(btnReplay);
+        btnSettings = new JButton("Settings");   styleSmallButton(btnSettings);
 
         // Layers
-        JPanel layersPanel = new JPanel(new GridLayout(2, 4, 5, 0)); // 2 Rows
+        JPanel layersPanel = new JPanel(new GridLayout(2, 5, 5, 0)); 
         layersPanel.setBorder(BorderFactory.createTitledBorder("Layers"));
         
         chkShowGreedy = new JCheckBox("Greedy"); chkShowGreedy.setForeground(Color.BLUE); chkShowGreedy.setSelected(true);
@@ -247,9 +275,16 @@ public class CombinedGUI extends JFrame {
         
         chkShowGADijk = new JCheckBox("GA Dijk"); chkShowGADijk.setForeground(Color.GREEN.darker()); chkShowGADijk.setSelected(true);
         chkShowGASCT = new JCheckBox("GA SCT"); chkShowGASCT.setForeground(new Color(0, 100, 0)); chkShowGASCT.setSelected(true);
-        
+        chkShowJunctionSCT = new JCheckBox("Junction Blocks"); chkShowJunctionSCT.setForeground(new Color(255, 105, 180)); chkShowJunctionSCT.setSelected(true);
+        chkShowDFS = new JCheckBox("GA DFS"); chkShowDFS.setForeground(Color.RED); chkShowDFS.setSelected(true);
+        chkShowJunctionDFS = new JCheckBox("DFS Junctions"); chkShowJunctionDFS.setForeground(Color.CYAN.darker()); chkShowJunctionDFS.setSelected(true);
         chkShowGlobal = new JCheckBox("Global DeadEnds"); chkShowGlobal.setForeground(new Color(139, 0, 0)); chkShowGlobal.setSelected(true);
-        chkShowJunction = new JCheckBox("Junction Blocks"); chkShowJunction.setForeground(new Color(255, 105, 180)); chkShowJunction.setSelected(true);
+
+        // Reduce font size for checkboxes too if you want them smaller
+        Font chkFont = new Font("Arial", Font.PLAIN, 11);
+        chkShowGreedy.setFont(chkFont); chkShowAStar.setFont(chkFont); chkShowDijk.setFont(chkFont);
+        chkShowGADijk.setFont(chkFont); chkShowGASCT.setFont(chkFont); chkShowJunctionSCT.setFont(chkFont);
+        chkShowDFS.setFont(chkFont); chkShowJunctionDFS.setFont(chkFont); chkShowGlobal.setFont(chkFont);
 
         Runnable refresh = this::refreshMazeView;
         chkShowGreedy.addActionListener(e -> refresh.run());
@@ -257,12 +292,16 @@ public class CombinedGUI extends JFrame {
         chkShowDijk.addActionListener(e-> refresh.run());
         chkShowGADijk.addActionListener(e -> refresh.run());
         chkShowGASCT.addActionListener(e -> refresh.run());
+        chkShowJunctionSCT.addActionListener(e -> refresh.run());
+        chkShowDFS.addActionListener(e -> refresh.run());         
+        chkShowJunctionDFS.addActionListener(e -> refresh.run());
         chkShowGlobal.addActionListener(e -> refresh.run());
-        chkShowJunction.addActionListener(e -> refresh.run());
         
         layersPanel.add(chkShowGreedy); layersPanel.add(chkShowAStar); layersPanel.add(chkShowDijk);
         layersPanel.add(chkShowGADijk); layersPanel.add(chkShowGASCT);
-        layersPanel.add(chkShowGlobal); layersPanel.add(chkShowJunction);
+        layersPanel.add(chkShowGlobal); layersPanel.add(chkShowJunctionSCT);
+        layersPanel.add(chkShowGADijk); layersPanel.add(chkShowGASCT); layersPanel.add(chkShowDFS);
+        layersPanel.add(chkShowGlobal); layersPanel.add(chkShowJunctionSCT); layersPanel.add(chkShowJunctionDFS);
 
         // --- SPEED CONTROL ---
         JPanel speedPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
@@ -277,6 +316,13 @@ public class CombinedGUI extends JFrame {
         });
         speedPanel.add(sliderSpeed); speedPanel.add(txtSpeed);
 
+        btnStop.addActionListener(e -> {
+            stopRequested = true;
+            btnStop.setText("Stop...");
+            btnStop.setEnabled(false);
+        });
+
+        // Add components to top panel
         topPanel.add(btnBack);
         topPanel.add(btnReset);
         topPanel.add(speedPanel);
@@ -285,6 +331,8 @@ public class CombinedGUI extends JFrame {
         topPanel.add(btnDijk);
         topPanel.add(btnRunGADijk);
         topPanel.add(btnRunGASCT);
+        topPanel.add(btnRunDFS);
+        topPanel.add(btnStop);
         topPanel.add(btnReplay);
         topPanel.add(btnSettings);
         topPanel.add(layersPanel);
@@ -331,12 +379,14 @@ public class CombinedGUI extends JFrame {
         statusDijk = new AlgorithmStatusPanel("Dijkstra");
         statusGADijk = new AlgorithmStatusPanel("GA (Dijkstra)");
         statusGASCT = new AlgorithmStatusPanel("GA (SCT)");
+        statusGADFS = new AlgorithmStatusPanel("GA (DFS)");
         
         dashboard.add(statusGreedy); dashboard.add(Box.createVerticalStrut(5));
         dashboard.add(statusAStar); dashboard.add(Box.createVerticalStrut(5));
         dashboard.add(statusDijk); dashboard.add(Box.createVerticalStrut(5));
         dashboard.add(statusGADijk); dashboard.add(Box.createVerticalStrut(5));
         dashboard.add(statusGASCT); dashboard.add(Box.createVerticalStrut(5));
+        dashboard.add(statusGADFS); dashboard.add(Box.createVerticalStrut(5));
 
         setupButtonActions(map);
 
@@ -348,6 +398,12 @@ public class CombinedGUI extends JFrame {
 
         mainContainer.add(View, MAZE_PANEL);
         cardLayout.show(mainContainer, MAZE_PANEL);
+    }
+
+    private void styleSmallButton(JButton btn) {
+        btn.setFont(new Font("Arial", Font.BOLD, 11)); // Smaller font (11pt)
+        btn.setMargin(new Insets(2, 2, 2, 2));         // Tighter padding (Top, Left, Bottom, Right)
+        btn.setFocusPainted(false);                    // Removes the focus box line for a cleaner look
     }
 
     // --- LOGIC: Slider & Dropdown ---
@@ -371,6 +427,11 @@ public class CombinedGUI extends JFrame {
         } else if (lastRunMode == LastRun.GA_SCT && !historyGASCTPath.isEmpty()) {
             if (index < historyGASCTPath.size()) {
                 updateMazeToGenerationSCT(index);
+                syncDropdown(index);
+            }
+        }else if (lastRunMode == LastRun.GA_DFS && !historyGADFSPath.isEmpty()) { // <-- Add Block
+            if (index < historyGADFSPath.size()) {
+                updateMazeToGenerationDFS(index);
                 syncDropdown(index);
             }
         }
@@ -418,9 +479,18 @@ public class CombinedGUI extends JFrame {
             }
         });
 
+        btnRunDFS.addActionListener(e -> {
+            if (lastGADFSPath != null && lastRunMode == LastRun.GA_DFS) {
+                setupReplayControls(historyGADFSPath.size());
+            } else {
+                runRealTimeGADFS(map);
+            }
+        });
+
         btnReplay.addActionListener(e -> {
             if (lastRunMode == LastRun.GA_DIJK && !historyGADijkPath.isEmpty()) runReplayAnimation();
             else if (lastRunMode == LastRun.GA_SCT && !historyGASCTPath.isEmpty()) runReplayAnimation();
+            else if (lastRunMode == LastRun.GA_DFS && !historyGADFSPath.isEmpty()) runReplayAnimation();
             else JOptionPane.showMessageDialog(this, "No valid history to replay. Run a GA first.");
         });
 
@@ -435,6 +505,7 @@ public class CombinedGUI extends JFrame {
             
             statusGADijk.setLoading("Cleared");
             statusGASCT.setLoading("Cleared");
+            statusGADFS.setLoading("Cleared");
             statusGreedy.setLoading("Waiting...");
             statusAStar.setLoading("Waiting...");
             statusDijk.setLoading("Waiting...");
@@ -464,22 +535,28 @@ public class CombinedGUI extends JFrame {
         mazeCanvas.resetToBase();
 
         // 1. Draw Global Dead Ends (SCT) - Red
-        if (chkShowGlobal.isSelected() && lastGASCTGlobalDeadEnds != null) {
-            mazeCanvas.overlayPoints(lastGASCTGlobalDeadEnds, new Color(139, 0, 0)); 
+        if (chkShowGlobal.isSelected() && lastGlobalDeadEnds != null) {
+            mazeCanvas.overlayPoints(lastGlobalDeadEnds, new Color(139, 0, 0)); 
         }
 
         // 2. Draw Junction Blocks (SCT) - Pink
-        if (chkShowJunction.isSelected() && lastGASCTJunctionBlocks != null) {
+        if (chkShowJunctionSCT.isSelected() && lastGASCTJunctionBlocks != null) {
             mazeCanvas.overlayPoints(lastGASCTJunctionBlocks, new Color(255, 105, 180));
         }
+        if (chkShowJunctionDFS.isSelected() && lastGADFSJunctionBlocks != null) {
+            mazeCanvas.overlayPoints(lastGADFSJunctionBlocks, Color.CYAN.darker());
+        }
+
 
         // 3. Paths
         if (chkShowGreedy.isSelected() && lastGreedyPath != null) mazeCanvas.overlayPath(lastGreedyPath, Color.BLUE);
         if (chkShowAStar.isSelected() && lastAStarPath != null) mazeCanvas.overlayPath(lastAStarPath, Color.ORANGE);
         if (chkShowDijk.isSelected() && lastDijkPath != null) mazeCanvas.overlayPath(lastDijkPath, Color.MAGENTA.darker());
+        if (chkShowDFS.isSelected() && lastGADFSPath != null) mazeCanvas.overlayPath(lastGADFSPath, Color.RED);
         
         if (chkShowGADijk.isSelected() && lastGADijkPath != null) mazeCanvas.overlayPath(lastGADijkPath, Color.GREEN.darker());
         if (chkShowGASCT.isSelected() && lastGASCTPath != null) mazeCanvas.overlayPath(lastGASCTPath, new Color(0, 100, 0)); // Dark Green
+    
         
         mazeCanvas.repaint();
     }
@@ -516,9 +593,19 @@ public class CombinedGUI extends JFrame {
         statusGASCT.updateStatsLive(index + 1, gaMaxGenerations, lastGASCTPath, currentMap, fit, "Replay");
     }
 
+    private void updateMazeToGenerationDFS(int index) {
+        lastGADFSPath = historyGADFSPath.get(index);
+        lastGADFSJunctionBlocks = historyGADFSJunctions.get(index);
+        double fit = historyGADFSTFitness.get(index);
+        refreshMazeView();
+        lblGenVal.setText("Gen: " + (index + 1) + " / " + historyGADFSPath.size());
+        statusGADFS.updateStatsLive(index + 1, gaMaxGenerations, lastGADFSPath, currentMap, fit, "Replay");
+    }
+
     // --- GA LOGIC: DIJKSTRA BASED (From MazeGUI) ---
     private void runRealTimeGADijk(MazeMap map) {
         setControlsEnabled(false);
+        stopRequested = false;
         lastRunMode = LastRun.GA_DIJK;
         statusGADijk.setLoading("Init...");
         
@@ -538,9 +625,15 @@ public class CombinedGUI extends JFrame {
                 population = ga.evolve(population, false, 0); // 0 = standard logic
                 Collections.sort(population);
                 DijksChromosome best = population.get(0);
-
                 List<Point> path = DijksDecoder.getPath(map, best, true);
                 List<Point> visualPath = new ArrayList<>(path);
+                final double currentFit = best.fitness;
+                final int currentLen = path.size();
+                if (stopRequested) {
+                    SwingUtilities.invokeLater(() -> statusGADijk
+                            .setLoading(String.format("Stopped (Fit: %.2f, Step: %d)", currentFit, currentLen)));
+                    break;
+                }
                 
                 synchronized(historyGADijkPath) {
                     historyGADijkPath.add(visualPath);
@@ -551,6 +644,11 @@ public class CombinedGUI extends JFrame {
                 if (Math.abs(best.fitness - lastBestFitness) < 0.0001) stagnationCount++;
                 else { stagnationCount = 0; lastBestFitness = best.fitness; ga.setMutationRate(defaultMut); }
                 if (stagnationCount > 50) ga.setMutationRate(0.4);
+                if (stagnationCount >= earlyStopStagnationLimit) {
+                    SwingUtilities.invokeLater(() -> statusGADijk
+                            .setLoading(String.format("Converged (Fit: %.2f, Step: %d)", currentFit, currentLen)));
+                    break;
+                }
 
                 final int cGen = gen;
                 final double cFit = best.fitness;
@@ -563,12 +661,20 @@ public class CombinedGUI extends JFrame {
                     lblGenVal.setText("Gen: " + cGen);
                 });
                 try { Thread.sleep(simulationSpeed); } catch (Exception e) {}
-            }
-            
+            }  
+            final int finalStagnationCount = stagnationCount;
             SwingUtilities.invokeLater(() -> {
                 setupReplayControls(historyGADijkPath.size());
                 setControlsEnabled(true);
-                statusGADijk.setLoading("Done");
+                if(!stopRequested && finalStagnationCount < earlyStopStagnationLimit) {
+                    if (!historyGADijkPath.isEmpty()) {
+                        double f = historyGADijkFitness.get(historyGADijkFitness.size() - 1);
+                        int l = historyGADijkPath.get(historyGADijkPath.size() - 1).size();
+                        statusGADijk.setLoading(String.format("Done (Fit: %.2f, Step: %d)", f, l));
+                    } else {
+                        statusGADijk.setLoading("Done");
+                    }
+                }
             });
         });
         gaThread.start();
@@ -577,6 +683,7 @@ public class CombinedGUI extends JFrame {
     // --- GA LOGIC: SCT BASED (From DumbestGUI) ---
     private void runRealTimeGASCT(MazeMap map) {
         setControlsEnabled(false);
+        stopRequested = false;
         lastRunMode = LastRun.GA_SCT;
         statusGASCT.setLoading("Init...");
 
@@ -597,9 +704,19 @@ public class CombinedGUI extends JFrame {
                 population = ga.evolve(population, false, StocasticChromosome.MUTATION_HYBRID);
                 Collections.sort(population);
                 StocasticChromosome best = population.get(0);
+                
 
                 List<Point> calculatedDeadEnds = calculateGlobalDeadEndsPoints();
                 List<Point> visualPath = new ArrayList<>(best.path);
+                final double currentFit = best.fitness;
+                final int currentLen = visualPath.size();
+
+                // 2. Update Stop Button Logic
+                if (stopRequested) {
+                    SwingUtilities.invokeLater(() -> statusGASCT
+                            .setLoading(String.format("Stopped (Fit: %.2f, Step: %d)", currentFit, currentLen)));
+                    break;
+                }
                 List<Point> blockPoints = convertBlocksToPoints(best.junctionBlocks, map);
                 
                 synchronized(historyGASCTPath) {
@@ -611,14 +728,18 @@ public class CombinedGUI extends JFrame {
                 if (Math.abs(best.fitness - lastBestFitness) < 0.0001) stagnationCount++;
                 else { stagnationCount = 0; lastBestFitness = best.fitness; ga.setMutationRate(defaultMut); }
                 //if (stagnationCount > 50) ga.setMutationRate(0.01);
-
+                if (stagnationCount >= earlyStopStagnationLimit) {
+                    SwingUtilities.invokeLater(() -> statusGASCT
+                            .setLoading(String.format("Converged (Fit: %.2f, Step: %d)", currentFit, currentLen)));
+                    break;
+                }
                 final int cGen = gen;
                 final double cFit = best.fitness;
                 
                 SwingUtilities.invokeLater(() -> {
                     lastGASCTPath = visualPath;
                     lastGASCTJunctionBlocks = blockPoints;
-                    lastGASCTGlobalDeadEnds = calculatedDeadEnds;
+                    lastGlobalDeadEnds = calculatedDeadEnds;
                     
                     refreshMazeView();
                     statusGASCT.updateStatsLive(cGen, gaMaxGenerations, visualPath, map, cFit, (cGen % 50 == 0 ? "Running" : ""));
@@ -628,11 +749,108 @@ public class CombinedGUI extends JFrame {
                 });
                 try { Thread.sleep(simulationSpeed); } catch (Exception e) {}
             }
-
+            final int finalStagnationCount = stagnationCount;
             SwingUtilities.invokeLater(() -> {
                 setupReplayControls(historyGASCTPath.size());
                 setControlsEnabled(true);
-                statusGASCT.setLoading("Done");
+                if (!stopRequested && finalStagnationCount < earlyStopStagnationLimit) {
+                    if (!historyGASCTPath.isEmpty()) {
+                        double f = historyGASCTFitness.get(historyGASCTFitness.size() - 1);
+                        int l = historyGASCTPath.get(historyGASCTPath.size() - 1).size();
+                        statusGASCT.setLoading(String.format("Done (Fit: %.2f, Step: %d)", f, l));
+                    } else {
+                        statusGASCT.setLoading("Done");
+                    }
+                }
+            });
+        });
+        gaThread.start();
+    }
+
+    private void runRealTimeGADFS(MazeMap map) {
+        setControlsEnabled(false);
+        stopRequested = false;
+        lastRunMode = LastRun.GA_DFS;
+        statusGADFS.setLoading("Init...");
+    
+        historyGADFSPath.clear();
+        historyGADFSJunctions.clear();
+        historyGADFSTFitness.clear();
+        sliderGenerations.setValue(0);
+    
+        Thread gaThread = new Thread(() -> {
+            // Assuming DFSGA constructor signature matches StocasticGA
+            DFSGA ga = new DFSGA(map, gaPopSize, gaMutationRate, gaCrossoverRate, gaElitismCount);
+            ArrayList<DFSChromosome> population = ga.initPopulation(null);
+            
+            double lastBestFitness = Double.MAX_VALUE;
+            int stagnationCount = 0;
+            double defaultMut = gaMutationRate;
+    
+            for (int gen = 1; gen <= gaMaxGenerations; gen++) {
+                // Assuming evolve signature matches
+                population = ga.evolve(population, false, 0); 
+                Collections.sort(population);
+                DFSChromosome best = population.get(0);
+                if (stopRequested) {
+                    SwingUtilities.invokeLater(() -> statusGADFS.setLoading("Stopped by User"));
+                    break; 
+                }
+    
+                // Assuming DFSChromosome has .path and .junctionBlocks public fields
+                List<Point> visualPath = new ArrayList<>(best.path);
+                List<Point> blockPoints = convertBlocksToPoints(best.junctionBlocks, map);
+                final double currentFit = best.fitness;
+                final int currentLen = visualPath.size();
+
+                // 2. Update Stop Button Logic
+                if (stopRequested) {
+                    SwingUtilities.invokeLater(() -> statusGADFS
+                            .setLoading(String.format("Stopped (Fit: %.2f, Step: %d)", currentFit, currentLen)));
+                    break;
+                }
+                synchronized(historyGADFSPath) {
+                    historyGADFSPath.add(visualPath);
+                    historyGADFSJunctions.add(blockPoints);
+                    historyGADFSTFitness.add(best.fitness);
+                }
+    
+                if (Math.abs(best.fitness - lastBestFitness) < 0.0001) stagnationCount++;
+                else { stagnationCount = 0; lastBestFitness = best.fitness; ga.setMutationRate(defaultMut); }
+                
+                if (stagnationCount >= earlyStopStagnationLimit) {
+                    SwingUtilities.invokeLater(() -> statusGADFS
+                            .setLoading(String.format("Converged (Fit: %.2f, Step: %d)", currentFit, currentLen)));
+                    break;
+                }
+                final int cGen = gen;
+                final double cFit = best.fitness;
+                
+                SwingUtilities.invokeLater(() -> {
+                    lastGADFSPath = visualPath;
+                    lastGADFSJunctionBlocks = blockPoints;
+                    
+                    refreshMazeView();
+                    statusGADFS.updateStatsLive(cGen, gaMaxGenerations, visualPath, map, cFit, (cGen % 50 == 0 ? "Running" : ""));
+                    sliderGenerations.setMaximum(cGen - 1);
+                    sliderGenerations.setValue(cGen - 1);
+                    lblGenVal.setText("Gen: " + cGen);
+                });
+                try { Thread.sleep(simulationSpeed); } catch (Exception e) {}
+            }
+            final int finalStagnationCount = stagnationCount;
+            SwingUtilities.invokeLater(() -> {
+                setupReplayControls(historyGADFSPath.size());
+                setControlsEnabled(true);
+                if (!stopRequested && finalStagnationCount < earlyStopStagnationLimit) {
+                    if (!historyGADFSPath.isEmpty()) {
+                        double f = historyGADFSTFitness.get(historyGADFSTFitness.size() - 1);
+                        int l = historyGADFSPath.get(historyGADFSPath.size() - 1).size();
+                        statusGADFS.setLoading(String.format("Done (Fit: %.2f, Len: %d)", f, l));
+                    } else {
+                        statusGADFS.setLoading("Done");
+                    }
+                }
             });
         });
         gaThread.start();
@@ -645,7 +863,7 @@ public class CombinedGUI extends JFrame {
             if (blocks[i]) {
                 int r = i / map.cols;
                 int c = i % map.cols;
-                if (!GlobalKnowledge.isDeadEnd(r, c)) {
+                if (!StocasticGlobalKnowledge.isDeadEnd(r, c)) {
                     points.add(new Point(c, r));
                 }
             }
@@ -662,9 +880,14 @@ public class CombinedGUI extends JFrame {
         btnRunGADijk.setEnabled(enabled);
         btnRunGASCT.setEnabled(enabled);
         btnSettings.setEnabled(enabled);
-        
+        btnRunDFS.setEnabled(enabled);
+        btnStop.setEnabled(!enabled);
+        if (enabled) {
+            btnStop.setText("STOP");
+        }
         boolean hasHistory = (lastRunMode == LastRun.GA_DIJK && !historyGADijkPath.isEmpty()) ||
-                             (lastRunMode == LastRun.GA_SCT && !historyGASCTPath.isEmpty());
+                             (lastRunMode == LastRun.GA_SCT && !historyGASCTPath.isEmpty() ||
+                             (lastRunMode == LastRun.GA_DFS && !historyGADFSPath.isEmpty()));
         sliderGenerations.setEnabled(enabled && hasHistory);
         cmbGenerations.setEnabled(enabled && hasHistory);
     }
@@ -674,12 +897,14 @@ public class CombinedGUI extends JFrame {
         JTextField txtMut = new JTextField(String.valueOf(gaMutationRate));
         JTextField txtGen = new JTextField(String.valueOf(gaMaxGenerations));
         JTextField txtEli = new JTextField(String.valueOf(gaElitismCount));
+        JTextField txtStag = new JTextField(String.valueOf(earlyStopStagnationLimit));
 
         JPanel panel = new JPanel(new GridLayout(0, 1));
         panel.add(new JLabel("Population Size:")); panel.add(txtPop);
         panel.add(new JLabel("Mutation Rate:")); panel.add(txtMut);
         panel.add(new JLabel("Max Generations:")); panel.add(txtGen);
         panel.add(new JLabel("Elitism Count:")); panel.add(txtEli);
+        panel.add(new JLabel("Early Stop (Stagnation Limit):")); panel.add(txtStag);
 
         int result = JOptionPane.showConfirmDialog(this, panel, "GA Configuration", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
 
@@ -689,7 +914,8 @@ public class CombinedGUI extends JFrame {
                 gaMutationRate = Double.parseDouble(txtMut.getText());
                 gaMaxGenerations = Integer.parseInt(txtGen.getText());
                 gaElitismCount = Integer.parseInt(txtEli.getText());
-                
+                earlyStopStagnationLimit = Integer.parseInt(txtStag.getText());
+
                 resetAllData();
                 refreshMazeView();
                 JOptionPane.showMessageDialog(this, "Settings Saved! Data Reset.");

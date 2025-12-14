@@ -1,4 +1,4 @@
-package GA_StocasticDecoder;
+package GA_DepthFirstSearch;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -7,7 +7,7 @@ import java.util.Random;
 import Struct.MazeMap;
 import Struct.Point;
 
-public class StocasticChromosome implements Comparable<StocasticChromosome> {
+public class DFSChromosome implements Comparable<DFSChromosome> {
     public double[] genes; 
     public double fitness = -1;
     public int rows, cols;
@@ -21,7 +21,7 @@ public class StocasticChromosome implements Comparable<StocasticChromosome> {
     public static final int MUTATION_FLIP   = 1;
     public static final int MUTATION_HYBRID = 2;
     
-    public StocasticChromosome(int rows, int cols) {
+    public DFSChromosome(int rows, int cols) {
         this.rows = rows;
         this.cols = cols;
         this.genes = new double[rows * cols];
@@ -88,14 +88,14 @@ public class StocasticChromosome implements Comparable<StocasticChromosome> {
         int[][] dirs = {{-1,0}, {1,0}, {0,-1}, {0,1}};
         for (int[] d : dirs) {
             int nr = r + d[0], nc = c + d[1];
-            if (map.isValid(nr, nc) && !StocasticGlobalKnowledge.isDeadEnd(nr, nc)) {
+            if (map.isValid(nr, nc) && !DFSGlobalKnowledge.isDeadEnd(nr, nc)) {
                 ways++;
             }
         }
         return ways > 2; 
     }
 
-    public void inheritWalls(StocasticChromosome p1, StocasticChromosome p2) {
+    public void inheritWalls(DFSChromosome p1, DFSChromosome p2) {
         for(int i=0; i<junctionBlocks.length; i++) {
             boolean w1 = p1.junctionBlocks[i];
             boolean w2 = p2.junctionBlocks[i];
@@ -105,8 +105,8 @@ public class StocasticChromosome implements Comparable<StocasticChromosome> {
         }
     }
 
-    public StocasticChromosome clone() {
-        StocasticChromosome c = new StocasticChromosome(rows, cols);
+    public DFSChromosome clone() {
+        DFSChromosome c = new DFSChromosome(rows, cols);
         System.arraycopy(this.genes, 0, c.genes, 0, genes.length);
         System.arraycopy(this.junctionBlocks, 0, c.junctionBlocks, 0, junctionBlocks.length);
         c.fitness = this.fitness;
@@ -115,7 +115,7 @@ public class StocasticChromosome implements Comparable<StocasticChromosome> {
     }
 
     @Override
-    public int compareTo(StocasticChromosome other) {
+    public int compareTo(DFSChromosome other) {
         return Double.compare(this.fitness, other.fitness);
     }
 }
