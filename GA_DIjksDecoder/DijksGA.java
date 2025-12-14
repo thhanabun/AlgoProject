@@ -1,4 +1,4 @@
-package GA_DijksDecoder;
+package GA_DIjksDecoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

@@ -1,4 +1,4 @@
-package GA_DijksDecoder;
+package GA_DIjksDecoder;
 
 import java.util.Random;
 

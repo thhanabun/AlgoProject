@@ -1,9 +1,9 @@
 package gui;
 import javax.swing.*;
 
-import GA_DijksDecoder.DijksChromosome;
-import GA_DijksDecoder.DijksDecoder;
-import GA_DijksDecoder.DijksGA;
+import GA_DIjksDecoder.DijksChromosome;
+import GA_DIjksDecoder.DijksDecoder;
+import GA_DIjksDecoder.DijksGA;
 import GA_DepthFirstSearch.DFSGlobalKnowledge;
 import GA_StocasticDecoder.StocasticChromosome;
 import GA_StocasticDecoder.StocasticGA;
