@@ -100,7 +100,7 @@ public class DFSPriorityDecoder {
         double distC = Math.abs(curC - goal.c);
         double manhattanDist = distR + distC;
 
-        double basePenalty = 100000.0;
+        double basePenalty = map.rows * map.cols * 10;
         double distancePenalty = Math.pow(manhattanDist, 2) * 2.5; 
 
         if (path.isEmpty()) {
