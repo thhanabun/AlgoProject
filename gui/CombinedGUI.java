@@ -297,11 +297,11 @@ public class CombinedGUI extends JFrame {
         
         chkShowGASCT = new JCheckBox("GA SCT"); chkShowGASCT.setForeground(new Color(0, 100, 0)); chkShowGASCT.setSelected(true);
         chkShowJunctionSCT = new JCheckBox("SCT Junction"); chkShowJunctionSCT.setForeground(new Color(255, 105, 180)); chkShowJunctionSCT.setSelected(true);
-        chkShowGlobalSCT = new JCheckBox("Global DeadEnds"); chkShowGlobalSCT.setForeground(new Color(139, 0, 0)); chkShowGlobalSCT.setSelected(true);
+        chkShowGlobalSCT = new JCheckBox("SCT DeadEnds"); chkShowGlobalSCT.setForeground(new Color(139, 0, 0)); chkShowGlobalSCT.setSelected(true);
 
         chkShowDFS = new JCheckBox("GA DFS"); chkShowDFS.setForeground(Color.RED); chkShowDFS.setSelected(true);
         chkShowJunctionDFS = new JCheckBox("DFS Junc"); chkShowJunctionDFS.setForeground(Color.CYAN.darker()); chkShowJunctionDFS.setSelected(true);
-        chkShowGlobalDFS = new JCheckBox("DFS DeadEnd"); chkShowGlobalDFS.setForeground(new Color(139, 0, 0)); chkShowGlobalDFS.setSelected(true);
+        chkShowGlobalDFS = new JCheckBox("DFS DeadEnd"); chkShowGlobalDFS.setForeground(new Color(139, 139, 139)); chkShowGlobalDFS.setSelected(true);
         // Reduce font size for checkboxes too if you want them smaller
         Font chkFont = new Font("Arial", Font.PLAIN, 10); // Slightly smaller to fit 6 columns
         chkShowGreedy.setFont(chkFont); chkShowAStar.setFont(chkFont); chkShowDijk.setFont(chkFont);
@@ -327,13 +327,14 @@ public class CombinedGUI extends JFrame {
         layersPanel.add(chkShowGreedy); 
         layersPanel.add(chkShowAStar); 
         layersPanel.add(chkShowDijk);
-        layersPanel.add(chkShowGASCT); 
-        layersPanel.add(chkShowJunctionSCT);
-        layersPanel.add(chkShowGlobalSCT); // SCT Dead Ends
-            
+        layersPanel.add(chkShowGADijk);
+        layersPanel.add(new JLabel(""));
+         layersPanel.add(new JLabel(""));
         // Row 2: SCT and DFS aligned
         
-        layersPanel.add(chkShowGADijk);
+        layersPanel.add(chkShowGASCT); 
+        layersPanel.add(chkShowJunctionSCT);
+        layersPanel.add(chkShowGlobalSCT);
         layersPanel.add(chkShowDFS); 
         layersPanel.add(chkShowJunctionDFS);
         layersPanel.add(chkShowGlobalDFS);
@@ -579,7 +580,7 @@ private void refreshMazeView() {
 
         // 2. Draw DFS Layers (DeadEnds and Junctions)
         if (chkShowGlobalDFS.isSelected() && lastGlobalDeadEndsDFS != null) {
-            mazeCanvas.overlayPoints(lastGlobalDeadEndsDFS, new Color(139, 0, 0)); // Dark Red
+            mazeCanvas.overlayPoints(lastGlobalDeadEndsDFS, new Color(139, 139, 139)); // Dark Red
         }
         if (chkShowJunctionDFS.isSelected() && lastGADFSJunctionBlocks != null) {
             mazeCanvas.overlayPoints(lastGADFSJunctionBlocks, Color.CYAN.darker());
@@ -962,7 +963,4 @@ private void refreshMazeView() {
         }
     }
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new CombinedGUI());
-    }
 }
