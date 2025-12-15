@@ -4,15 +4,16 @@ import javax.swing.*;
 import GA_DIjksDecoder.DijksChromosome;
 import GA_DIjksDecoder.DijksDecoder;
 import GA_DIjksDecoder.DijksGA;
-import GA_DepthFirstSearch.DFSGlobalKnowledge;
+
 import GA_StocasticDecoder.StocasticChromosome;
 import GA_StocasticDecoder.StocasticGA;
 import GA_StocasticDecoder.StocasticGlobalKnowledge;
+
 import GA_DepthFirstSearch.DFSChromosome;
 import GA_DepthFirstSearch.DFSGA;
 import GA_DepthFirstSearch.DFSGlobalKnowledge;
 
-import MazeSolverAlgo.Astar;
+import MazeSolverAlgo.MyAlgorithm;
 
 import Struct.MazeMap;
 import Struct.Point;
@@ -492,9 +493,9 @@ public class CombinedGUI extends JFrame {
     }
 
     private void setupButtonActions(MazeMap map) {
-        btnGreedy.addActionListener(e -> runBackgroundAlgo("Greedy", () -> Astar.getGreedyPath(map), statusGreedy, path -> lastGreedyPath = path));
-        btnAStar.addActionListener(e -> runBackgroundAlgo("A*", () -> Astar.getPureAStarPath(map), statusAStar, path -> lastAStarPath = path));
-        btnDijk.addActionListener(e -> runBackgroundAlgo("Dijkstra", () -> Astar.getDijkstraPath(map), statusDijk, path -> lastDijkPath = path));
+        btnGreedy.addActionListener(e -> runBackgroundAlgo("Greedy", () -> MyAlgorithm.getGreedyPath(map), statusGreedy, path -> lastGreedyPath = path));
+        btnAStar.addActionListener(e -> runBackgroundAlgo("A*", () -> MyAlgorithm.getPureAStarPath(map), statusAStar, path -> lastAStarPath = path));
+        btnDijk.addActionListener(e -> runBackgroundAlgo("Dijkstra", () -> MyAlgorithm.getDijkstraPath(map), statusDijk, path -> lastDijkPath = path));
 
         btnRunGADijk.addActionListener(e -> {
             if (lastGADijkPath != null && lastRunMode == LastRun.GA_DIJK) {

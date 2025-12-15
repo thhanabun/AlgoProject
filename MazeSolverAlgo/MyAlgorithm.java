@@ -8,7 +8,7 @@ import java.util.PriorityQueue;
 import Struct.MazeMap;
 import Struct.Point;
 
-public class Astar {
+public class MyAlgorithm {
 
     private static class Node implements Comparable<Node> {
         int r, c;
