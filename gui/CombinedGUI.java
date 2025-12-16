@@ -730,7 +730,7 @@ public class CombinedGUI extends JFrame {
 
         Thread gaThread = new Thread(() -> {
             StocasticGA ga = new StocasticGA(map, gaPopSize, gaMutationRate, gaCrossoverRate, gaElitismCount);
-            ArrayList<StocasticChromosome> population = ga.initPopulation(null);
+            ArrayList<StocasticChromosome> population = ga.initPopulation();
             
             double lastBestFitness = Double.MAX_VALUE;
             int stagnationCount = 0;
@@ -747,7 +747,6 @@ public class CombinedGUI extends JFrame {
                 final double currentFit = best.fitness;
                 final int currentLen = visualPath.size();
 
-                // 2. Update Stop Button Logic
                 if (stopRequested) {
                     SwingUtilities.invokeLater(() -> statusGASCT
                             .setLoading(String.format("Stopped (Fit: %.2f, Step: %d)", currentFit, currentLen)));
@@ -763,7 +762,6 @@ public class CombinedGUI extends JFrame {
 
                 if (Math.abs(best.fitness - lastBestFitness) < 0.0001) stagnationCount++;
                 else { stagnationCount = 0; lastBestFitness = best.fitness; ga.setMutationRate(defaultMut); }
-                //if (stagnationCount > 50) ga.setMutationRate(0.01);
                 if (stagnationCount >= earlyStopStagnationLimit) {
                     SwingUtilities.invokeLater(() -> statusGASCT
                             .setLoading(String.format("Converged (Fit: %.2f, Step: %d)", currentFit, currentLen)));
@@ -816,7 +814,7 @@ public class CombinedGUI extends JFrame {
     
         Thread gaThread = new Thread(() -> {
             DFSGA ga = new DFSGA(map, gaPopSize, gaMutationRate, gaCrossoverRate, gaElitismCount);
-            ArrayList<DFSChromosome> population = ga.initPopulation(null);
+            ArrayList<DFSChromosome> population = ga.initPopulation();
             
             double lastBestFitness = Double.MAX_VALUE;
             int stagnationCount = 0;
@@ -831,15 +829,15 @@ public class CombinedGUI extends JFrame {
                 List<Point> currentDeadEnds = calculateGlobalDeadEndsDFS();
                 // ---------------------------------------
 
-                if (stopRequested) {
-                    SwingUtilities.invokeLater(() -> statusGADFS.setLoading("Stopped by User"));
-                    break; 
-                }
-    
+                
                 List<Point> visualPath = new ArrayList<>(best.path);
                 List<Point> blockPoints = convertBlocksToPoints(best.junctionBlocks, map);
                 final double currentFit = best.fitness;
                 final int currentLen = visualPath.size();
+                if (stopRequested) {
+                    SwingUtilities.invokeLater(() -> statusGADFS.setLoading(String.format("Stopped (Fit: %.2f ,Step %d)",currentFit,currentLen)));
+                    break; 
+                }
                 
                 synchronized(historyGADFSPath) {
                     historyGADFSPath.add(visualPath);

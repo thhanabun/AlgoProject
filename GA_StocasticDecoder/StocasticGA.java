@@ -26,14 +26,13 @@ public class StocasticGA {
         StocasticGlobalKnowledge.init(map.rows, map.cols);
     }
 
-    public ArrayList<StocasticChromosome> initPopulation(List<Point> seedPath) {
+    public ArrayList<StocasticChromosome> initPopulation() {
         ArrayList<StocasticChromosome> population = new ArrayList<>();
         for (int i = 0; i < popSize; i++) {
             StocasticChromosome c = new StocasticChromosome(map.rows, map.cols);
             c.randomInit(); 
             c.path = new ArrayList<>(); 
             c.fitness = StocasticDecoder.calculateFitness(map, c, c.path);
-            //c.fitness = DFSPriorityDecoder.calculateFitness(map, c, c.path);
             population.add(c);
         }
         return population;
@@ -87,7 +86,6 @@ public class StocasticGA {
             if (child.fitness == -1) {
                 List<Point> tempPath = new ArrayList<>();
                 child.fitness = StocasticDecoder.calculateFitness(map, child, tempPath);
-                //child.fitness = DFSPriorityDecoder.calculateFitness(map, child, tempPath);
                 child.path = tempPath;
             }
         });

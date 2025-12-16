@@ -26,7 +26,7 @@ public class DFSGA {
         DFSGlobalKnowledge.init(map.rows, map.cols);
     }
 
-    public ArrayList<DFSChromosome> initPopulation(List<Point> seedPath) {
+    public ArrayList<DFSChromosome> initPopulation() {
         ArrayList<DFSChromosome> population = new ArrayList<>();
         for (int i = 0; i < popSize; i++) {
             DFSChromosome c = new DFSChromosome(map.rows, map.cols);

@@ -8,8 +8,6 @@ import Struct.MazeMap;
 import Struct.Point;
 
 public class StocasticDecoder {
-
-    public static double ALPHA = 1; 
     
     public static double calculateFitness(MazeMap map, StocasticChromosome chromo, List<Point> path) {
         path.clear();
@@ -18,7 +16,7 @@ public class StocasticDecoder {
 
         int curR = start.r;
         int curC = start.c;
-        
+
         path.add(new Point(curR, curC));
         boolean[][] isVisited = new boolean[map.rows][map.cols];
         isVisited[curR][curC] = true;
@@ -50,7 +48,6 @@ public class StocasticDecoder {
                         
                     double p = chromo.getPriority(nr, nc);
                     if (p < 0.001) p = 0.001; 
-                    p = Math.pow(p, ALPHA); 
                     
                     validMoves.add(new Point(nr, nc));
                     probs.add(p);
