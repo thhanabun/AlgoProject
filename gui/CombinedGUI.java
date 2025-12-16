@@ -566,7 +566,7 @@ public class CombinedGUI extends JFrame {
     }
 
     // --- VISUALIZATION ---
-private void refreshMazeView() {
+    private void refreshMazeView() {
         if (mazeCanvas == null) return;
         mazeCanvas.resetToBase();
 

@@ -9,7 +9,7 @@ import Struct.Point;
 
 public class StocasticDecoder {
 
-    public static double ALPHA = 2; 
+    public static double ALPHA = 1; 
     
     public static double calculateFitness(MazeMap map, StocasticChromosome chromo, List<Point> path) {
         path.clear();
@@ -73,7 +73,6 @@ public class StocasticDecoder {
                 path.add(new Point(curR, curC));
                 
             } else {
-                // --- BACKTRACKING ---
                 if (path.size() > 1) {
                     int badR = curR;
                     int badC = curC;
@@ -113,7 +112,6 @@ public class StocasticDecoder {
             return basePenalty * 2; 
         }
         return basePenalty + distancePenalty;
-
     }
 
 

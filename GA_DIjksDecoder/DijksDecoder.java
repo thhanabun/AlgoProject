@@ -37,43 +37,31 @@ public class DijksDecoder {
         int rows = map.rows; int cols = map.cols;
         double[][] bestVirtual = new double[rows][cols];
         for(int i=0; i<rows; i++) for(int j=0; j<cols; j++) bestVirtual[i][j] = Double.MAX_VALUE;
-
         PriorityQueue<Node> pq = new PriorityQueue<>();
         Point start = map.start; Point goal = map.goal;
-
         double startH = useHeuristic ? manhattan(start, goal) : 0;
         pq.add(new Node(start.r, start.c, 0, 0, startH, null));
         bestVirtual[start.r][start.c] = 0;
-
         int nodesExplored = 0;
         int maxNodes = rows * cols * 20;
-
         while (!pq.isEmpty()) {
             Node current = pq.poll();
             nodesExplored++;
-            
             if (nodesExplored > maxNodes) return 10000 + (nodesExplored * 0.1);
-
             if (current.r == goal.r && current.c == goal.c) return current.realCost;
-            
             if (current.gVirtual > bestVirtual[current.r][current.c]) continue;
-
             int[][] dirs = {{-1,0}, {1,0}, {0,-1}, {0,1}};
             for (int[] dir : dirs) {
                 int nr = current.r + dir[0];
                 int nc = current.c + dir[1];
                 if (!map.isValid(nr, nc)) continue;
-
                 int weight = map.getWeight(nr, nc);
                 double priority = chromo.getPriority(nr, nc);
                 if (priority < 0.0001) priority = 0.0001;
-                
                 double factor = Math.pow(priority, ALPHA); 
-                double moveCostVirtual = weight / factor; 
-
+                double moveCostVirtual = weight / factor;
                 double newGVirtual = current.gVirtual + moveCostVirtual;
                 double newRealCost = current.realCost + weight;
-
                 if (newGVirtual < bestVirtual[nr][nc]) {
                     bestVirtual[nr][nc] = newGVirtual;
                     double newH = useHeuristic ? manhattan(new Point(nr, nc), goal) : 0;

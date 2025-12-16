@@ -6,7 +6,6 @@ public class DijksChromosome implements Comparable<DijksChromosome> {
     public double[] genes;
     public double fitness = -1;
     public int rows, cols;
-    public boolean[] junctionBlocks;
     public Object path;
     
     private static final Random rand = new Random();

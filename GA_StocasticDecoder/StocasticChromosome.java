@@ -12,7 +12,7 @@ public class StocasticChromosome implements Comparable<StocasticChromosome> {
     public double fitness = -1;
     public int rows, cols;
 
-    public boolean[] junctionBlocks; // เก็บเฉพาะทางแยกส่วนตัว
+    public boolean[] junctionBlocks;
     public List<Point> path = new ArrayList<>(); 
     
     private static final Random rand = new Random();

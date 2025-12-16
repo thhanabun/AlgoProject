@@ -12,14 +12,10 @@ public class DFSChromosome implements Comparable<DFSChromosome> {
     public double fitness = -1;
     public int rows, cols;
 
-    public boolean[] junctionBlocks; // เก็บเฉพาะทางแยกส่วนตัว
+    public boolean[] junctionBlocks;
     public List<Point> path = new ArrayList<>(); 
     
     private static final Random rand = new Random();
-
-    public static final int MUTATION_RANDOM = 0;
-    public static final int MUTATION_FLIP   = 1;
-    public static final int MUTATION_HYBRID = 2;
     
     public DFSChromosome(int rows, int cols) {
         this.rows = rows;
